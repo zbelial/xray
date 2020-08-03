@@ -40,6 +40,18 @@
 
 ;;; Read xray and display them
 
+(defvar counsel-xr-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-k") 'counsel-xr-delete-ray)
+    map))
+
+
+(defun counsel-xr-delete-ray (cand)
+  ""
+  (let* ((ray (cdr cand))
+         (id (plist-get ray :id)))
+    (xr-delete-ray ray)))
+
 (defun counsel-xr-format-ray (ray)
   ""
   (format "%s - %s  %s"
@@ -63,50 +75,50 @@
                   (cons (counsel-xr-format-ray ray) ray))
             rays)))
 
+(defun counsel-xr-file-rays-jump (cand)
+  (let* ((ray (cdr cand))
+         (file (plist-get ray :file))
+         (type (plist-get ray :type))
+         viewer page linum)
+    (cond
+     ((s-equals? type "text")
+      (setq linum (plist-get ray :linum))
+      (goto-line linum)
+      (recenter)
+      )
+     ((s-equals? type "pdf")
+      (setq page (plist-get ray :page))
+      (cond
+       ((eq major-mode 'eaf-mode)
+        (eaf-call "call_function_with_args" eaf--buffer-id
+                  "jump_to_page_with_num" page)
+        )
+       ((eq major-mode 'pdf-view-mode)
+        (pdf-view-goto-page page))
+       (t
+        (message "Unsupported major mode.")))
+      )
+     ((s-equals? type "html")
+      (setq linum (plist-get ray :linum))
+      (goto-line linum)
+      (recenter)
+      ))))
+
 (defun counsel-xr-file-rays ()
   (interactive)
   (let ((cb (current-buffer))
         (rays (counsel-xr-file-rays-collector)))
     (ivy-read "Rays: " rays
-              :action #'(lambda (cand)
-                          (let* ((ray (cdr cand))
-                                 (file (plist-get ray :file))
-                                 (type (plist-get ray :type))
-                                 viewer page linum)
-                            (cond
-                             ((s-equals? type "text")
-                              (setq linum (plist-get ray :linum))
-                              (goto-line linum)
-                              (recenter)
-                              )
-                             ((s-equals? type "pdf")
-                              (setq page (plist-get ray :page))
-                              (cond
-                               ((eq major-mode 'eaf-mode)
-                                (eaf-call "call_function_with_args" eaf--buffer-id
-                                          "jump_to_page_with_num" page)
-                                )
-                               ((eq major-mode 'pdf-view-mode)
-                                (pdf-view-goto-page page))
-                               (t
-                                (message "Unsupported major mode.")))
-                              )
-                             ((s-equals? type "html")
-                              (setq linum (plist-get ray :linum))
-                              (goto-line linum)
-                              (recenter)
-                              ))))
+              :action '(1
+                        ("o" counsel-xr-file-rays-jump "jump to ray")
+                        ("d" counsel-xr-delete-ray "delete a ray")
+                        )
               :caller 'counsel-xr-file-rays
               ))
   )
 
-(defun counsel-xr-rays ()
-  (interactive)
-  (let ((cb (current-buffer))
-        (rays (counsel-xr-rays-collector)))
-    (ivy-read "Rays: " rays
-              :action #'(lambda (cand)
-                          (let* ((ray (cdr cand))
+(defun counsel-xr-rays-jump (cand)
+  (let* ((ray (cdr cand))
                                  (file (plist-get ray :file))
                                  (type (plist-get ray :type))
                                  viewer page linum)
@@ -134,8 +146,19 @@
                               (goto-line linum)
                               (recenter)
                               ))))
+
+(defun counsel-xr-rays ()
+  (interactive)
+  (let ((cb (current-buffer))
+        (rays (counsel-xr-rays-collector)))
+    (ivy-read "Rays: " rays
+              :action '(1
+                        ("o" counsel-xr-rays-jump "jump to ray")
+                        ("d" counsel-xr-delete-ray "delete a ray")
+                        )
               :caller 'counsel-xr-rays
               ))
   )
+
 
 (provide 'counsel-xray)

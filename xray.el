@@ -38,31 +38,35 @@
 ;; TODO
 ;; 1. counsel列表格式 TEMP
 ;; 2. ray的desc DONE
-;; 3. 记录文件相对路径
+;; 3. 记录文件相对路径 DONE
 ;; 4. 当前文件的ray数量显示在modeline DONE
 ;; 5. html相关 DONE
-;; 6. context
+;; 6. 删除ray DONE
+;; 7. context
 
 (require 'ht)
 (require 's)
 (require 'f)
 
 ;;; Custom
-(defcustom xr-default-dir user-emacs-directory
+(defcustom xr-default-directory user-emacs-directory
   "The default directory used to store topic thread data."
   :type  'string
-  :group 'xray)
-
-(defcustom xr-save-to-default-dir nil
-  "If non-nil, topic thread data will be saved to `xr-default-dir'.
-Otherwise, the data will be saved to current directory."
-  :type 'boolean
   :group 'xray)
 
 (defcustom xr-default-file-name "xray-data.el"
   "The default file name used to store thread data."
   :type  'string
   :group 'xray)
+
+(defcustom xr-directory-alist nil
+  "Alist of directory.
+The rays added to files in the first directory will be saved to second directory."
+  :group 'xray
+  :type '(repeat (cons string (cons (directory :tag "Directory storing files.")
+                                    (directory :tag "XRay data file directory.")))))
+
+(defconst xr-default-tag "__DEFAULT_TAG__")
 
 ;;; Variables
 (defvar xr-file-map (ht-create)
@@ -103,6 +107,76 @@ currently displayed message, if any."
            (message nil))))))
 
 ;;; Add ray
+(defsubst xr-assoc-matched-filename (filename)
+  "Return xr-directory-alist item which matches filename most."
+  (let ((max 0)
+        result)
+    (dolist (assoc xr-directory-alist)
+      (when (string-prefix-p (cadr assoc) filename)
+        (when (> (length (cadr assoc)) max)
+          (setq result assoc)
+          (setq max (length (cadr assoc))))))
+    (identity result)))
+
+(defsubst xr-assoc-matched-tag (tag)
+  "Return xr-directory-alist item matching tag."
+  (cl-find-if
+   (lambda (x) (string= (car x) tag))
+   xr-directory-alist))
+
+(defsubst xr-xray-file-directory (filename)
+  "Return xray file directory of filename"
+  (let ((xr-dir-assoc (xr-assoc-matched-filename filename)))
+    (if xr-dir-assoc
+        (f-slash (cddr xr-dir-assoc))
+      (f-slash xr-default-directory))))
+
+(defsubst xr-file-tag (filename)
+  "Return base directory of filename"
+  (let ((xr-dir-assoc (xr-assoc-matched-filename filename)))
+    (if xr-dir-assoc
+        (car xr-dir-assoc)
+      xr-default-tag)))
+
+(defsubst xr-xray-file-directory-tag (tag)
+  "Return contents directory using tag"
+  (let ((xr-dir-assoc (xr-assoc-matched-tag tag)))
+    (if xr-dir-assoc
+        (f-slash (cddr xr-dir-assoc))
+      (f-slash xr-default-directory))))
+
+(defsubst xr-file-base-directory (filename)
+  "Return base directory of filename"
+  (let ((xr-dir-assoc (xr-assoc-matched-filename filename)))
+    (if xr-dir-assoc
+        (f-slash (cadr xr-dir-assoc))
+      "/"
+      )))
+
+(defsubst xr-file-base-directory-tag (tag)
+  "Return base directory of tag"
+  (let ((xr-dir-assoc (xr-assoc-matched-tag tag)))
+    (if xr-dir-assoc
+        (f-slash (cadr xr-dir-assoc))
+      "/"
+      )))
+
+(defsubst xr-file-relative-path (filename)
+  "Return relative path of filename to xr-file-base-directory"
+  (let ((xr-dir-assoc (xr-assoc-matched-filename filename)))
+    (if xr-dir-assoc
+        (s-chop-prefix (f-full (cadr xr-dir-assoc)) filename)
+      (s-chop-prefix "/" filename))))
+
+(defsubst xr-xray-file-relative-path (filename xray-file-name)
+  "Return relative path of filename to xr-file-base-directory"
+  (let ((xr-dir-assoc (xr-assoc-matched-filename filename)))
+    (if xr-dir-assoc
+        (s-chop-prefix (f-full (cddr xr-dir-assoc)) xray-file-name)
+      (s-chop-prefix (f-full xr-default-directory) xray-file-name)
+      )))
+
+
 (defun xr-current-line-number ()
   ""
   (line-number-at-pos)
@@ -162,10 +236,11 @@ currently displayed message, if any."
     (when file-name
       (setq xray-file-name (ht-get xr-file-map file-name))
       (when (not xray-file-name)
-        (setq xray-file-dir (locate-dominating-file file-name xr-default-file-name))
-        (if xray-file-dir
-            (setq xray-file-name (concat xray-file-dir xr-default-file-name))
-          (setq xray-file-name (concat xr-default-dir xr-default-file-name)))
+        (setq xray-file-dir (xr-xray-file-directory file-name))
+        (if (not (f-exists-p xray-file-dir))
+            (make-directory xray-file-dir)
+            )
+        (setq xray-file-name (concat (f-slash xray-file-dir) xr-default-file-name))
         (ht-set! xr-file-map file-name xray-file-name))
 
       (expand-file-name xray-file-name)
@@ -294,11 +369,13 @@ currently displayed message, if any."
     (ht-clear! xr-file-rays)
     (ht-clear! xr-file-topics)
     (ht-clear! xr-file-map)
+    (ht-clear! xr-topic-rays)
     )
   )
 
 (defun xr-load-data-ensure (xray-file-name)
   ""
+  (message "xray-file-name %s" xray-file-name)
   (when (not (ht-contains-p xr-rays xray-file-name))
     (xr-load-data xray-file-name)))
 
@@ -317,9 +394,14 @@ currently displayed message, if any."
 (defun xr-recover-file-rays(data)
   "Restore xray data."
   (let ((file (plist-get data :file))
-        (xray-file (plist-get data :xray-file-name))
+        (xray-file (plist-get data :xray-file))
+        (tag (plist-get data :tag))
         (rays (plist-get data :rays))
         )
+
+    (setq file (concat (expand-file-name (xr-file-base-directory-tag tag)) file))
+    (setq xray-file (concat (expand-file-name (xr-xray-file-directory-tag tag)) xray-file))
+
     (when (not (ht-contains-p xr-rays xray-file))
       (ht-set! xr-rays xray-file (ht-create)))
     (when (not (ht-contains-p xr-topics xray-file))
@@ -329,63 +411,60 @@ currently displayed message, if any."
     (ht-set! (ht-get* xr-topics xray-file) file '())
     (ht-set! xr-file-rays file '())
     (ht-set! xr-file-topics file '())
-
     (ht-set! xr-file-map file xray-file)
 
-    (let (file-topics topic-rays file-rays)
-      (dolist (ray rays)
-        (setq ray (plist-put ray :file file))
-        (setq topic (plist-get ray :topic))
-        (setq topic-rays (ht-get xr-topic-rays topic))
-        (when (not (member topic file-topics))
-          (add-to-list 'file-topics topic))
-        (add-to-list 'topic-rays ray)
-        (add-to-list 'file-rays ray)
-        (ht-set! xr-topic-rays topic topic-rays)
-        )
+    (when (> (length rays) 0)
+      (let (file-topics topic-rays file-rays)
+        (dolist (ray rays)
+          (setq ray (plist-put ray :file file))
+          (setq topic (plist-get ray :topic))
+          (setq topic-rays (ht-get xr-topic-rays topic))
+          (when (not (member topic file-topics))
+            (add-to-list 'file-topics topic))
+          (add-to-list 'topic-rays ray)
+          (add-to-list 'file-rays ray)
+          (ht-set! xr-topic-rays topic topic-rays)
+          )
 
-      (ht-set! xr-file-topics file file-topics)
-      (ht-set! xr-file-rays file file-rays)
-      (ht-set! (ht-get xr-topics xray-file) file file-topics)
-      (ht-set! (ht-get xr-rays xray-file) file file-rays)
+        (ht-set! xr-file-topics file file-topics)
+        (ht-set! xr-file-rays file file-rays)
+        (ht-set! (ht-get xr-topics xray-file) file file-topics)
+        (ht-set! (ht-get xr-rays xray-file) file file-rays)
+        )
       )
     )
   )
 
 ;;; Save xray to file.
-(defun xr-save-data (&optional file-name)
-  (let ((file-name (or file-name (xr-buffer-file-name))))
-    (when file-name
-      (let ((xray-file-name (xr-xray-file-name file-name)))
-        (xr-save-thread file-name (ht-get xr-file-rays xray-file-name)))))
-  )
-
 (defun xr-format-ray (ray)
   ""
   (let ((type (plist-get ray :type)))
     (cond
      ((s-equals? type "text")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :linum %d :context \"%s\")"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\")"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)
+              (plist-get ray :desc)
               (plist-get ray :linum)
               (plist-get ray :context))
       )
      ((s-equals? type "pdf")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :page %d :viewer \"%s\" :context \"%s\")"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :page %d :viewer \"%s\" :context \"%s\")"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)
+              (plist-get ray :desc)
               (plist-get ray :page)
               (plist-get ray :viewer)
               (plist-get ray :context))
       )
      ((s-equals? type "html")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :linum %d :context \"%s\")"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\")"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)
+              (plist-get ray :desc)
               (plist-get ray :linum)
               (plist-get ray :context))
       )
@@ -396,19 +475,20 @@ currently displayed message, if any."
 
 (defun xr-save-file-rays (file-name &optional rays)
   ""
-  (let ((xray-file-name (xr-xray-file-name file-name)))
-    (f-append-text
-     (format "\(xr-recover-file-rays '\(
+  (let* ((xray-file-name (xr-xray-file-name file-name))
+         (rays (or rays (ht-get* xr-rays xray-file-name file-name))))
+    (when (> (length rays) 0)
+      (f-append-text
+       (format "\(xr-recover-file-rays '\(
+:tag \"%s\"
 :file \"%s\"
-:xray-file-name \"%s\"
+:xray-file \"%s\"
 :rays \(
 %s
-)))\n\n" file-name xray-file-name (mapconcat #'xr-format-ray rays "\n"))
-     'utf-8-unix
-     xray-file-name
-     )
-    )
-  )
+)))\n\n" (xr-file-tag file-name) (xr-file-relative-path file-name) (xr-xray-file-relative-path file-name xray-file-name) (mapconcat #'xr-format-ray rays "\n"))
+       'utf-8-unix
+       xray-file-name
+       ))))
 
 (defun xr-save-rays (xray-file-name &optional file-rays)
   ""
@@ -453,7 +533,7 @@ currently displayed message, if any."
   )
 
 (defun xr-rays-in-file (&optional file-name)
-  ""
+  "Rays in current file."
   (interactive)
   (let ((file-name (or file-name (xr-buffer-file-name))))
     (when file-name
@@ -462,7 +542,7 @@ currently displayed message, if any."
       )))
 
 (defun xr-rays (&optional file-name)
-  ""
+  "Rays in file-name's group."
   (interactive)
   (let ((file-name (or file-name (xr-buffer-file-name)))
         xray-file-name file-rays all-rays)
@@ -480,6 +560,24 @@ currently displayed message, if any."
                   )
               file-rays)
       all-rays)))
+
+;;; Delete
+
+(defun xr-delete-ray (ray)
+  ""
+  (let* ((file (plist-get ray :file))
+         (xray-file (xr-xray-file-name file))
+         (id (plist-get ray :id))
+         (file-rays (ht-get xr-file-rays file)))
+    (setq file-rays (remove-if #'(lambda (ray)
+                                   (equal id (plist-get ray :id)))
+                               file-rays))
+    (ht-set! xr-file-rays file file-rays)
+    (ht-set! (ht-get xr-rays xray-file) file file-rays)
+    (when (not file-rays)
+      (ht-remove! xr-file-rays file)
+      (ht-remove! (ht-get xr-rays xray-file) file))
+    (xr-save-rays xray-file)))
 
 ;;; Other 
 (defun xr-mode-line ()

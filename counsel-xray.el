@@ -35,51 +35,32 @@
 ;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth
 ;; Floor, Boston, MA 02110-1301, USA.
 
+(require 'f)
 (require 'xray)
 
 ;;; Read xray and display them
 
 (defun counsel-xr-format-ray (ray)
   ""
-  (let ((type (plist-get ray :type)))
-    (cond
-     ((s-equals? type "text")
-      (format "Topic: %s %d %s"
-              (plist-get ray :topic)
-              (plist-get ray :linum)
-              (plist-get ray :file)
-              )
-      )
-     ((s-equals? type "pdf")
-      (format "Topic: %s %d %s"
-              (plist-get ray :topic)
-              (plist-get ray :page)
-              (plist-get ray :file)
-              )
-      )
-     ((s-equals? type "html")
-      )
-     (t
-      nil)
-     ))
+  (format "%s - %s  %s"
+          (plist-get ray :topic)
+          (plist-get ray :desc)
+          (f-filename (plist-get ray :file))
+          )
   )
 
 (defun counsel-xr-file-rays-collector ()
   ""
-  (let ((rays (xr-rays-in-file (xr-buffer-file-name)))
-        )
+  (let ((rays (xr-rays-in-file (xr-buffer-file-name))))
     (mapcar #'(lambda (ray)
-                (when (listp ray)
-                  (cons (counsel-xr-format-ray ray) ray)))
+                  (cons (counsel-xr-format-ray ray) ray))
             rays)))
 
 (defun counsel-xr-rays-collector ()
   ""
   (let ((rays (xr-rays (xr-buffer-file-name))))
     (mapcar #'(lambda (ray)
-                (when (listp ray)
                   (cons (counsel-xr-format-ray ray) ray))
-                )
             rays)))
 
 (defun counsel-xr-file-rays ()
@@ -111,7 +92,9 @@
                                 (message "Unsupported major mode.")))
                               )
                              ((s-equals? type "html")
-                              ;; TODO
+                              (setq linum (plist-get ray :linum))
+                              (goto-line linum)
+                              (recenter)
                               ))))
               :caller 'counsel-xr-file-rays
               ))
@@ -139,15 +122,17 @@
                               (setq viewer (plist-get ray :viewer))
                               (cond
                                ((equal viewer "eaf-open")
-                                (eaf-open file "pdf-viewe")
+                                (eaf-open file "pdf-viewer")
                                 (eaf-call "call_function_with_args" eaf--buffer-id
-                                          "jump_to_page_with_num" page)
-                                )
+                                          "jump_to_page_with_num" page))
                                (t
                                 (find-file file)
                                 (pdf-view-goto-page page))))
                              ((s-equals? type "html")
-                              ;; TODO
+                              (eww (s-concat "file://" file))
+                              (setq linum (plist-get ray :linum))
+                              (goto-line linum)
+                              (recenter)
                               ))))
               :caller 'counsel-xr-rays
               ))

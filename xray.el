@@ -36,11 +36,12 @@
 ;; Floor, Boston, MA 02110-1301, USA.
 
 ;; TODO
-;; 1. counsel列表格式
-;; 2. ray的desc
+;; 1. counsel列表格式 TEMP
+;; 2. ray的desc DONE
 ;; 3. 记录文件相对路径
-;; 4. 当前文件的ray数量显示在modeline
-;; 5. html相关
+;; 4. 当前文件的ray数量显示在modeline DONE
+;; 5. html相关 DONE
+;; 6. context
 
 (require 'ht)
 (require 's)
@@ -101,23 +102,23 @@ currently displayed message, if any."
              (message ,msg)
            (message nil))))))
 
-;;; Add xray
+;;; Add ray
 (defun xr-current-line-number ()
   ""
   (line-number-at-pos)
   )
 
 (defun xr-new-ray-text-or-prog(file-name xray-file-name)
-  "Create a new item."
+  "Create a new ray."
   (let ((topic (xr-select-or-add-topic file-name xray-file-name))
-        (desc (xr-create-desc))
+        (desc (xr-add-desc))
         (linum (xr-current-line-number))
         (context ""))
     (list :id (xr-id) :type "text" :file file-name :topic topic :desc desc :linum linum :context context)
     ))
 
 (defun xr-new-ray-pdf(file-name xray-file-name)
-  "Create a new item."
+  "Create a new ray."
   (cond
    ((eq major-mode 'eaf-mode)
     (let* ((app eaf--buffer-app-name)
@@ -127,7 +128,7 @@ currently displayed message, if any."
           (progn
             (setq page (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
             (setq topic (xr-select-or-add-topic file-name xray-file-name))
-            (setq desc (xr-create-desc))
+            (setq desc (xr-add-desc))
 
             (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :viewer "eaf-open" :context "")
             )
@@ -136,24 +137,26 @@ currently displayed message, if any."
    ((eq major-mode 'pdf-view-mode)
     (setq page (pdf-view-current-page))
     (setq topic (xr-select-or-add-topic file-name xray-file-name))
-    (setq desc (xr-create-desc))
+    (setq desc (xr-add-desc))
 
     (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "")
     )
-   ((eq major-mode 'doc-view-mode)
-    )
    (t
-    (message "Unsupported mode."))
+    (user-error "%s" "Unsupported mode."))
    )
   )
 
-;; TODO
 (defun xr-new-ray-html(file-name xray-file-name)
-  "Create a new item."
+  "Create a new ray."
+  (let ((topic (xr-select-or-add-topic file-name xray-file-name))
+          (desc (xr-add-desc))
+          (linum (xr-current-line-number))
+          (context ""))
+      (list :id (xr-id) :type "html" :file file-name :topic topic :desc desc :linum linum :context context))
   )
 
 (defun xr-xray-file-name (&optional file-name)
-  "Find the thread data file of current file."
+  "Find the xray data file of current file."
   (let ((file-name (or file-name (xr-buffer-file-name)))
         xray-file-name xray-file-dir)
     (when file-name
@@ -168,11 +171,37 @@ currently displayed message, if any."
       (expand-file-name xray-file-name)
       )))
 
+(defsubst xr-remove-html-anchor (file-name)
+  ""
+  (let* ((len (length file-name))
+         (pos-of-anchor (s-index-of "#" file-name)))
+    (if (not pos-of-anchor) ;; no anchor part
+        file-name
+      (substring file-name 0 pos-of-anchor))))
+
+
 (defun xr-buffer-file-name()
   ""
-  (if (eq major-mode 'eaf-mode)
-      eaf--buffer-url
-    (buffer-file-name)))
+  (cond
+   ((eq major-mode 'eaf-mode)
+    (let ((app eaf--buffer-app-name))
+      (when (string-equal app "pdf-viewer")
+        eaf--buffer-url))
+    )
+   ((eq major-mode 'eww-mode)
+    (let (buffer-url)
+      (setq buffer-url (eww-current-url))
+      (when (string-prefix-p "file://" buffer-url)
+        (xr-remove-html-anchor (substring buffer-url (length "file://")))))
+    )
+   ((eq major-mode 'w3m-mode)
+    (let (buffer-url)
+      (setq buffer-url w3m-current-url)
+      (when (string-prefix-p "file://" buffer-url)
+        (xr-remove-html-anchor (substring buffer-url (length "file://")))))
+    )
+   (t
+    (buffer-file-name))))
 
 (defun xr-add-ray()
   "Create a new ray and add it to xray file."
@@ -191,7 +220,7 @@ currently displayed message, if any."
           (xr-load-data-ensure xray-file-name)
 
           (setq ray (xr-new-ray file-name xray-file-name))
-          (when ray ;TODO
+          (when ray
             (when (not (ht-contains-p xr-file-rays file-name))
               (ht-set! xr-file-rays file-name '())
               (ht-set! (ht-get xr-rays xray-file-name) file-name '())
@@ -205,7 +234,7 @@ currently displayed message, if any."
             (xr-save-rays xray-file-name)
             )
           )
-      (message "Cannot add ray to this file."))
+      (user-error "%s" "Cannot add ray to this file."))
     )
   )
 
@@ -213,12 +242,8 @@ currently displayed message, if any."
   "Random number as ray id."
   (random 9999999999999))
 
-;; xray item format
-;; pdf - id: file: topic: context: app: page:
-;; text/prog - id: file: topic: context: app: linum:
-;; html:
 (defun xr-new-ray (file-name xray-file-name)
-  "Add a new piece of xray data."
+  "Create a new piece of xray data."
   (let* ((suffix (f-ext file-name))
          ray)
     ;; (message "xr-new-ray suffix: %s" suffix)
@@ -227,8 +252,8 @@ currently displayed message, if any."
       (setq ray (xr-new-ray-pdf file-name xray-file-name))
       )
      ((or
-       (s-equals? suffix "html")
-       (s-equals? suffix "htm"))
+       (eq major-mode 'eww-mode)
+       (eq major-mode 'w3m-mode))
       (setq ray (xr-new-ray-html file-name xray-file-name))
       )
      ((derived-mode-p 'text-mode)
@@ -238,12 +263,12 @@ currently displayed message, if any."
       (setq ray (xr-new-ray-text-or-prog file-name xray-file-name))
       )
      (t
-      (message "Unsupported file."))
+      (user-error "%s" "Unsupported file type."))
      )
     )
   )
 
-(defun xr-create-desc ()
+(defun xr-add-desc ()
   "Add a desc to ray."
   (read-string "Add an Description: " "")
   )
@@ -357,9 +382,15 @@ currently displayed message, if any."
               (plist-get ray :context))
       )
      ((s-equals? type "html")
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :linum %d :context \"%s\")"
+              (plist-get ray :id)
+              (plist-get ray :type)
+              (plist-get ray :topic)
+              (plist-get ray :linum)
+              (plist-get ray :context))
       )
      (t
-      nil)
+      (user-error "%s - %s" "Invalid ray type" type))
      ))
   )
 
@@ -449,6 +480,27 @@ currently displayed message, if any."
                   )
               file-rays)
       all-rays)))
+
+;;; Other 
+(defun xr-mode-line ()
+  (let ((file-name (xr-buffer-file-name))
+        (file-rays-count 0)
+        (rays-count 0)
+        xray-file-name)
+    (when file-name
+      (setq xray-file-name (xr-xray-file-name file-name))
+      (setq file-rays-count (length (ht-get xr-file-rays file-name)))
+      
+      (ht-map #'(lambda (k v)
+                  (setq rays-count (+ rays-count (ht-size v))))
+              xr-rays))
+    (format "%d:%d" file-rays-count rays-count)))
+
+(defvar mode-line-xray-info '(:eval (format "  [R:%s]" (xr-mode-line))))
+;; (setq mode-line-xray-info '(:eval (format "  [R:%s]" (xr-mode-line))))
+(put 'mode-line-xray-info 'risky-local-variable t)
+
+;; (add-to-list 'mode-line-format 'mode-line-xray-info t)
 
 ;;; Hook
 (add-hook 'kill-emacs-hook #'xr-save-all-rays)

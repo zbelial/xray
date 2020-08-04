@@ -44,6 +44,9 @@
 ;; 6. 删除ray DONE
 ;; 7. context
 ;; 8. 删除:viewer，添加配置指定是否用eaf打开pdf DONE
+;; 9. 只用xr-file-rays保存ray数据
+;; 10. 支持运行时切换file对应的ray数据保存位置(xr-directory-alist)
+;; 11. 查看某topic的所有ray
 
 (require 'ht)
 (require 's)

@@ -43,6 +43,7 @@
 ;; 5. html相关 DONE
 ;; 6. 删除ray DONE
 ;; 7. context
+;; 8. 删除:viewer，添加配置指定是否用eaf打开pdf DONE
 
 (require 'ht)
 (require 's)
@@ -65,6 +66,12 @@ The rays added to files in the first directory will be saved to second directory
   :group 'xray
   :type '(repeat (cons string (cons (directory :tag "Directory storing files.")
                                     (directory :tag "XRay data file directory.")))))
+
+(defcustom xr-open-pdf-with-eaf t
+  "When non-nil, use eaf-open to open pdf files."
+  :group 'xray
+  :type 'boolean)
+
 
 (defconst xr-default-tag "__DEFAULT_TAG__")
 
@@ -204,12 +211,19 @@ currently displayed message, if any."
             (setq topic (xr-select-or-add-topic file-name xray-file-name))
             (setq desc (xr-add-desc))
 
-            (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :viewer "eaf-open" :context "")
+            (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "")
             )
         (message "Not an eaf pdf viewer buffer.")))
     )
    ((eq major-mode 'pdf-view-mode)
     (setq page (pdf-view-current-page))
+    (setq topic (xr-select-or-add-topic file-name xray-file-name))
+    (setq desc (xr-add-desc))
+
+    (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "")
+    )
+   ((eq major-mode 'pdf-view-mode)
+    (setq page (doc-view-current-page))
     (setq topic (xr-select-or-add-topic file-name xray-file-name))
     (setq desc (xr-add-desc))
 
@@ -450,13 +464,12 @@ currently displayed message, if any."
               (plist-get ray :context))
       )
      ((s-equals? type "pdf")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :page %d :viewer \"%s\" :context \"%s\")"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :page %d :context \"%s\")"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)
               (plist-get ray :desc)
               (plist-get ray :page)
-              (plist-get ray :viewer)
               (plist-get ray :context))
       )
      ((s-equals? type "html")

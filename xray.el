@@ -79,10 +79,6 @@ The rays added to files in the first directory will be saved to second directory
 (defconst xr-default-tag "__DEFAULT_TAG__")
 
 ;;; Variables
-(defvar xr-file-map (ht-create)
-  "Keep track of the xray files of opened files.
-key: raw file name, value: xray file name.")
-
 (defvar xr-file-rays (ht-create)
   "Which rays each file has.
 key: raw file name, value: rays")
@@ -216,7 +212,7 @@ currently displayed message, if any."
 
             (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "")
             )
-        (message "Not an eaf pdf viewer buffer.")))
+        (user-error "Not an eaf pdf viewer buffer.")))
     )
    ((eq major-mode 'pdf-view-mode)
     (setq page (pdf-view-current-page))
@@ -251,14 +247,11 @@ currently displayed message, if any."
   (let ((file-name (or file-name (xr-buffer-file-name)))
         xray-file-name xray-file-dir)
     (when file-name
-      (setq xray-file-name (ht-get xr-file-map file-name))
-      (when (not xray-file-name)
-        (setq xray-file-dir (xr-xray-file-directory file-name))
-        (if (not (f-exists-p xray-file-dir))
-            (make-directory xray-file-dir)
-            )
-        (setq xray-file-name (concat (f-slash xray-file-dir) xr-default-file-name))
-        (ht-set! xr-file-map file-name xray-file-name))
+      (setq xray-file-dir (xr-xray-file-directory file-name))
+      (if (not (f-exists-p xray-file-dir))
+          (make-directory xray-file-dir)
+        )
+      (setq xray-file-name (concat (f-slash xray-file-dir) xr-default-file-name))
 
       (expand-file-name xray-file-name)
       )))
@@ -385,14 +378,13 @@ currently displayed message, if any."
     (ht-clear! xr-topics)
     (ht-clear! xr-file-rays)
     (ht-clear! xr-file-topics)
-    (ht-clear! xr-file-map)
     (ht-clear! xr-topic-rays)
     )
   )
 
 (defun xr-load-data-ensure (xray-file-name)
   ""
-  (message "xray-file-name %s" xray-file-name)
+  ;; (message "xray-file-name %s" xray-file-name)
   (when (not (ht-contains-p xr-rays xray-file-name))
     (xr-load-data xray-file-name)))
 
@@ -428,7 +420,6 @@ currently displayed message, if any."
     (ht-set! (ht-get* xr-topics xray-file) file '())
     (ht-set! xr-file-rays file '())
     (ht-set! xr-file-topics file '())
-    (ht-set! xr-file-map file xray-file)
 
     (when (> (length rays) 0)
       (let (file-topics topic-rays file-rays)

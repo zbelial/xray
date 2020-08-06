@@ -48,6 +48,8 @@
 ;; 10. 支持运行时切换file对应的ray数据保存位置(xr-directory-alist) DONE
 ;; 11. 查看某topic的所有ray DONE
 ;; 12. 运行时切换file对应的ray时，原ray文件要删掉旧内容
+;; 13. 编辑ray（desc，topic可能没有必要）
+;; 14. truncate太长的desc（以弹窗形式展示？）
 
 (require 'ht)
 (require 's)
@@ -246,7 +248,7 @@ currently displayed message, if any."
     (when file-name
       (setq xray-file-dir (xr-xray-file-directory file-name))
       (if (not (f-exists-p xray-file-dir))
-          (make-directory xray-file-dir)
+          (make-directory xray-file-dir t)
         )
       (setq xray-file-name (concat (f-slash xray-file-dir) xr-default-file-name))
 

@@ -54,10 +54,11 @@
 
 (defun counsel-xr-format-ray (ray)
   ""
-  (format "%s - %s  %s"
+  (format "%s - %s  %s : %d"
           (plist-get ray :topic)
           (plist-get ray :desc)
           (f-filename (plist-get ray :file))
+          (or (plist-get ray :linum) (plist-get ray :page))
           )
   )
 

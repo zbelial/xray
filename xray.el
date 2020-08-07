@@ -201,15 +201,16 @@ currently displayed message, if any."
   (cond
    ((eq major-mode 'eaf-mode)
     (let* ((app eaf--buffer-app-name)
-           page topic desc
+           page topic desc percent
            )
       (if (string-equal app "pdf-viewer")
           (progn
             (setq page (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
+            (setq percent (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent")))
             (setq topic (xr-select-or-add-topic file-name xray-file-name))
             (setq desc (xr-add-desc))
 
-            (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "")
+            (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :extra percent)
             )
         (user-error "Not an eaf pdf viewer buffer.")))
     )
@@ -459,13 +460,14 @@ currently displayed message, if any."
               (plist-get ray :context))
       )
      ((s-equals? type "pdf")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :page %d :context \"%s\")"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :page %d :context \"%s\" :extra \"%s\")"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)
               (plist-get ray :desc)
               (plist-get ray :page)
-              (plist-get ray :context))
+              (plist-get ray :context)
+              (plist-get ray :extra))
       )
      ((s-equals? type "html")
       (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\")"
@@ -633,12 +635,17 @@ currently displayed message, if any."
          (xray-file (xr-xray-file-name file))
          (id (plist-get ray :id))
          (desc (plist-get ray :desc))
-         (file-rays (ht-get xr-file-rays file)))
+         (topic (plist-get ray :topic))
+         (file-rays (ht-get xr-file-rays file))
+         new-desc new-topic)
+    (setq new-topic (read-string "New topic: " topic nil topic))
     (setq new-desc (read-string "New desc: " desc nil desc))
-    (when (not (s-equals-p desc new-desc))
+
+    (when (or (not (s-equals-p topic new-topic)) (not (s-equals-p desc new-desc)))
       (setq file-rays (remove-if #'(lambda (ray)
                                      (equal id (plist-get ray :id)))
                                  file-rays))
+      (setq ray (plist-put ray :topic new-topic))
       (setq ray (plist-put ray :desc new-desc))
       (add-to-list 'file-rays ray)
 

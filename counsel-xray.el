@@ -96,7 +96,7 @@
   (let* ((ray (cdr cand))
          (file (plist-get ray :file))
          (type (plist-get ray :type))
-         page linum)
+         page linum percent)
     (cond
      ((s-equals? type "text")
       (setq linum (plist-get ray :linum))
@@ -105,10 +105,15 @@
       )
      ((s-equals? type "pdf")
       (setq page (plist-get ray :page))
+      (setq percent (plist-get ray :extra))
       (cond
        ((eq major-mode 'eaf-mode)
-        (eaf-call "call_function_with_args" eaf--buffer-id
-                  "jump_to_page_with_num" page)
+        (if percent
+            (eaf-call "call_function_with_args" eaf--buffer-id
+                      "jump_to_percent_with_num" percent)
+          (eaf-call "call_function_with_args" eaf--buffer-id
+                    "jump_to_page_with_num" page)
+          )
         )
        ((eq major-mode 'pdf-view-mode)
         (pdf-view-goto-page page))
@@ -130,16 +135,16 @@
               :action '(1
                         ("o" counsel-xr-file-rays-jump "jump to ray")
                         ("d" counsel-xr-delete-ray "delete a ray")
+                        ("e" counsel-xr-edit-ray "edit a ray's desc")
                         )
               :caller 'counsel-xr-file-rays
-              ))
-  )
+              )))
 
 (defun counsel-xr-rays-jump (cand)
   (let* ((ray (cdr cand))
          (file (plist-get ray :file))
          (type (plist-get ray :type))
-         page linum)
+         page linum percent)
     (cond
      ((s-equals? type "text")
       (find-file file)
@@ -149,11 +154,16 @@
       )
      ((s-equals? type "pdf")
       (setq page (plist-get ray :page))
+      (setq percent (plist-get ray :extra))
       (cond
        ((eq xr-open-pdf-with-eaf t)
         (eaf-open file "pdf-viewer")
-        (eaf-call "call_function_with_args" eaf--buffer-id
-                  "jump_to_page_with_num" page))
+        (if percent
+            (eaf-call "call_function_with_args" eaf--buffer-id
+                      "jump_to_percent_with_num" percent)
+          (eaf-call "call_function_with_args" eaf--buffer-id
+                    "jump_to_page_with_num" page))
+        )
        (t
         (find-file file)
         (cond
@@ -202,8 +212,7 @@
                         ("e" counsel-xr-edit-ray "edit a ray's desc")
                         )
               :caller 'counsel-xr-topic-rays
-              ))
-  )
+              )))
 
 
 (provide 'counsel-xray)

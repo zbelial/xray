@@ -48,19 +48,28 @@
 
 (defun counsel-xr-delete-ray (cand)
   ""
-  (let* ((ray (cdr cand))
-         (id (plist-get ray :id)))
+  (let* ((ray (cdr cand)))
     (xr-delete-ray ray)))
 
-(defun counsel-xr-format-ray (ray)
+(defun counsel-xr-edit-ray (cand)
   ""
-  (format "%s - %s  %s : %d"
-          (plist-get ray :topic)
-          (plist-get ray :desc)
-          (f-filename (plist-get ray :file))
-          (or (plist-get ray :linum) (plist-get ray :page))
-          )
-  )
+  (let* ((ray (cdr cand)))
+    (xr-edit-ray ray)))
+
+(defun counsel-xr-format-ray (ray &optional with-file)
+  ""
+  (if with-file
+      (format "%s - %s  %s : %d"
+              (plist-get ray :topic)
+              (plist-get ray :desc)
+              (f-filename (plist-get ray :file))
+              (or (plist-get ray :linum) (plist-get ray :page))
+              )
+    (format "%s - %s  : %d"
+            (plist-get ray :topic)
+            (plist-get ray :desc)
+            (or (plist-get ray :linum) (plist-get ray :page))
+            )))
 
 (defun counsel-xr-file-rays-collector ()
   ""
@@ -73,14 +82,14 @@
   ""
   (let ((rays (xr-rays (xr-buffer-file-name))))
     (mapcar #'(lambda (ray)
-                (cons (counsel-xr-format-ray ray) ray))
+                (cons (counsel-xr-format-ray ray t) ray))
             rays)))
 
 (defun counsel-xr-topic-rays-collector (topic)
   ""
   (let ((rays (xr-rays-of-topic topic)))
     (mapcar #'(lambda (ray)
-                (cons (counsel-xr-format-ray ray) ray))
+                (cons (counsel-xr-format-ray ray t) ray))
             rays)))
 
 (defun counsel-xr-file-rays-jump (cand)
@@ -171,6 +180,7 @@
               :action '(1
                         ("o" counsel-xr-rays-jump "jump to ray")
                         ("d" counsel-xr-delete-ray "delete a ray")
+                        ("e" counsel-xr-edit-ray "edit a ray's desc")
                         )
               :caller 'counsel-xr-rays
               ))
@@ -180,14 +190,16 @@
   (interactive)
   (let (topic
         rays)
-    (ivy-read "Select a topic: " (xr-topics)
-              :action #'(lambda (cand) (setq topic cand)))
+    ;; (ivy-read "Select a topic: " (xr-topics)
+    ;;           :action #'(lambda (cand) (setq topic cand)))
+    (setq topic (completing-read "Select a topic: " (xr-topics)))
     (message "topic %s" topic)
     (setq rays (counsel-xr-topic-rays-collector topic))
     (ivy-read "Rays: " rays
               :action '(1
                         ("o" counsel-xr-rays-jump "jump to ray")
                         ("d" counsel-xr-delete-ray "delete a ray")
+                        ("e" counsel-xr-edit-ray "edit a ray's desc")
                         )
               :caller 'counsel-xr-topic-rays
               ))

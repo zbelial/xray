@@ -47,8 +47,8 @@
 ;; 9. 只用xr-file-rays保存ray数据 DONE
 ;; 10. 支持运行时切换file对应的ray数据保存位置(xr-directory-alist) DONE
 ;; 11. 查看某topic的所有ray DONE
-;; 12. 运行时切换file对应的ray时，原ray文件要删掉旧内容
-;; 13. 编辑ray（desc，topic可能没有必要）
+;; 12. 运行时切换file对应的ray时，原ray文件要删掉旧file内容 TEMP 目前保存时会删掉 - 20200807
+;; 13. 编辑ray（desc，topic可能没有必要） DONE
 ;; 14. truncate太长的desc（以弹窗形式展示？）
 
 (require 'ht)
@@ -625,6 +625,26 @@ currently displayed message, if any."
     (when (not file-rays)
       (ht-remove! xr-file-rays file))
     (xr-save-rays xray-file)))
+
+;;; Edit Ray
+(defun xr-edit-ray (ray)
+  ""
+  (let* ((file (plist-get ray :file))
+         (xray-file (xr-xray-file-name file))
+         (id (plist-get ray :id))
+         (desc (plist-get ray :desc))
+         (file-rays (ht-get xr-file-rays file)))
+    (setq new-desc (read-string "New desc: " desc nil desc))
+    (when (not (s-equals-p desc new-desc))
+      (setq file-rays (remove-if #'(lambda (ray)
+                                     (equal id (plist-get ray :id)))
+                                 file-rays))
+      (setq ray (plist-put ray :desc new-desc))
+      (add-to-list 'file-rays ray)
+
+      (ht-set! xr-file-rays file file-rays)
+      (xr-save-rays xray-file))))
+
 
 ;;; Other 
 (defun xr-mode-line ()

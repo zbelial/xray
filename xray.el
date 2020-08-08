@@ -55,6 +55,11 @@
 (require 's)
 (require 'f)
 
+(declare-function doc-view-current-page "doc-view")
+(declare-function pdf-view-bookmark-make-record "ext:pdf-view")
+(declare-function pdf-view-current-page "ext:pdf-view")
+(declare-function pdf-view-mode "ext:pdf-view")
+
 ;;; Custom
 (defcustom xr-default-directory user-emacs-directory
   "The default directory used to store topic thread data."
@@ -73,7 +78,7 @@ The rays added to files in the first directory will be saved to second directory
   :type '(repeat (cons string (cons (directory :tag "Directory storing files.")
                                     (directory :tag "XRay data file directory.")))))
 
-(defcustom xr-open-pdf-with-eaf t
+(defcustom xr-open-pdf-with-eaf nil
   "When non-nil, use eaf-open to open pdf files."
   :group 'xray
   :type 'boolean)
@@ -196,41 +201,57 @@ currently displayed message, if any."
     (list :id (xr-id) :type "text" :file file-name :topic topic :desc desc :linum linum :context context)
     ))
 
-(defun xr-new-ray-pdf(file-name xray-file-name)
+(defun xr-pdf-view-page-percent ()
+  ""
+  (let ((bookmark (pdf-view-bookmark-make-record))
+        (percent 0.0))
+    (dolist (ele bookmark)
+      ;; (message "ele %S" ele)
+      (when (and (listp ele) (eq (car ele) 'origin))
+        ;; (message "target %S" ele)
+        (setq percent (cddr ele))
+        ))
+    percent))
+
+(defun xr-new-ray-pdf(file-name &optional xray-file-name)
   "Create a new ray."
-  (cond
-   ((eq major-mode 'eaf-mode)
-    (let* ((app eaf--buffer-app-name)
-           page topic desc percent
-           )
-      (if (string-equal app "pdf-viewer")
-          (progn
-            (setq page (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
-            (setq percent (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent")))
-            (setq topic (xr-select-or-add-topic file-name xray-file-name))
-            (setq desc (xr-add-desc))
+  (let ((xray-file-name (or xray-file-name (xr-xray-file-name file-name))))
+    (cond
+     ((eq major-mode 'eaf-mode)
+      (let* ((app eaf--buffer-app-name)
+             (percent 0)
+             page topic desc
+             )
+        (if (string-equal app "pdf-viewer")
+            (progn
+              (setq page (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
+              (setq percent (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent")))
+              (setq topic (xr-select-or-add-topic file-name xray-file-name))
+              (setq desc (xr-add-desc))
 
-            (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :extra percent)
-            )
-        (user-error "Not an eaf pdf viewer buffer.")))
-    )
-   ((eq major-mode 'pdf-view-mode)
-    (setq page (pdf-view-current-page))
-    (setq topic (xr-select-or-add-topic file-name xray-file-name))
-    (setq desc (xr-add-desc))
+              (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons percent -1))
+              )
+          (user-error "Not an eaf pdf viewer buffer.")))
+      )
+     ((eq major-mode 'pdf-view-mode)
+      (setq page (pdf-view-current-page))
+      (setq topic (xr-select-or-add-topic file-name xray-file-name))
+      (setq desc (xr-add-desc))
+      (setq percent (xr-pdf-view-page-percent))
 
-    (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "")
-    )
-   ((eq major-mode 'pdf-view-mode)
-    (setq page (doc-view-current-page))
-    (setq topic (xr-select-or-add-topic file-name xray-file-name))
-    (setq desc (xr-add-desc))
+      (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons -1 percent))
+      )
+     ((eq major-mode 'pdf-view-mode)
+      (setq page (doc-view-current-page))
+      (setq topic (xr-select-or-add-topic file-name xray-file-name))
+      (setq desc (xr-add-desc))
 
-    (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "")
+      (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons -1 percent))
+      )
+     (t
+      (user-error "%s" "Unsupported mode."))
+     )
     )
-   (t
-    (user-error "%s" "Unsupported mode."))
-   )
   )
 
 (defun xr-new-ray-html(file-name xray-file-name)
@@ -309,7 +330,7 @@ currently displayed message, if any."
             (ht-set! xr-file-rays file-name '()))
 
           (setq rays (ht-get xr-file-rays file-name))
-          (add-to-list 'rays ray)
+          (add-to-list 'rays ray t)
           (ht-set! xr-file-rays file-name rays)
 
           (xr-save-rays xray-file-name)
@@ -434,7 +455,7 @@ currently displayed message, if any."
           (when (not (member topic xray-topics))
             (add-to-list 'xray-topics topic))
 
-          (add-to-list 'file-rays ray)
+          (add-to-list 'file-rays ray t)
           )
 
         (ht-set! xr-file-topics file file-topics)
@@ -460,14 +481,14 @@ currently displayed message, if any."
               (plist-get ray :context))
       )
      ((s-equals? type "pdf")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :page %d :context \"%s\" :extra \"%s\")"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :page %d :context \"%s\" :percent %S)"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)
               (plist-get ray :desc)
               (plist-get ray :page)
               (plist-get ray :context)
-              (plist-get ray :extra))
+              (plist-get ray :percent))
       )
      ((s-equals? type "html")
       (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\")"
@@ -637,7 +658,7 @@ currently displayed message, if any."
          (desc (plist-get ray :desc))
          (topic (plist-get ray :topic))
          (file-rays (ht-get xr-file-rays file))
-         new-desc new-topic)
+         new-desc new-topic topics xray-topics)
     (setq new-topic (read-string "New topic: " topic nil topic))
     (setq new-desc (read-string "New desc: " desc nil desc))
 
@@ -647,6 +668,15 @@ currently displayed message, if any."
                                  file-rays))
       (setq ray (plist-put ray :topic new-topic))
       (setq ray (plist-put ray :desc new-desc))
+      (when (not (member new-topic (ht-get xr-file-topics file)))
+        (setq topics (ht-get xr-file-topics file))
+        (add-to-list 'topics new-topic)
+        (ht-set! xr-file-topics file topics))
+      (when (not (member new-topic (ht-get xr-topics xray-file)))
+        (setq xray-topics (ht-get xr-topics xray-file))
+        (add-to-list 'xray-topics new-topic)
+        (ht-set! xr-topics xray-file xray-topics))
+      
       (add-to-list 'file-rays ray)
 
       (ht-set! xr-file-rays file file-rays)

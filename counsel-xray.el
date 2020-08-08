@@ -38,6 +38,9 @@
 (require 'f)
 (require 'xray)
 
+(declare-function pdf-view-goto-page "ext:pdf-view")
+(declare-function doc-view-goto-page "doc-view")
+
 ;;; Read xray and display them
 
 (defvar counsel-xr-map
@@ -92,6 +95,30 @@
                 (cons (counsel-xr-format-ray ray t) ray))
             rays)))
 
+(defun counsel-xr-doc-get-page-slice ()
+  "Return (slice-top . slice-height)."
+  (let* ((slice (or (image-mode-window-get 'slice) '(0 0 1 1)))
+         (slice-top (float (nth 1 slice)))
+         (slice-height (float (nth 3 slice))))
+    (when (or (> slice-top 1)
+              (> slice-height 1))
+      (let ((height (cdr (image-size (image-mode-window-get 'image) t))))
+        (setq slice-top (/ slice-top height)
+              slice-height (/ slice-height height))))
+    (cons slice-top slice-height)))
+
+(defun counsel-xr-conv-page-percentage-scroll (percentage)
+  (let* ((slice (counsel-xr-doc-get-page-slice))
+         (display-height (cdr (image-display-size (image-get-display-property))))
+         (display-percentage (min 1 (max 0 (/ (- percentage (car slice)) (cdr slice)))))
+         (scroll (max 0 (floor (* display-percentage display-height)))))
+    scroll))
+
+(defun counsel-xr-pdf-view-goto-percent (percent)
+  ""
+  (image-scroll-up (- (counsel-xr-conv-page-percentage-scroll percent)
+                      (window-vscroll))))
+
 (defun counsel-xr-file-rays-jump (cand)
   (let* ((ray (cdr cand))
          (file (plist-get ray :file))
@@ -105,18 +132,22 @@
       )
      ((s-equals? type "pdf")
       (setq page (plist-get ray :page))
-      (setq percent (plist-get ray :extra))
+      (setq percent (plist-get ray :percent))
+
       (cond
        ((eq major-mode 'eaf-mode)
-        (if percent
+        (if (and percent (not (equal -1 (car percent))))
             (eaf-call "call_function_with_args" eaf--buffer-id
-                      "jump_to_percent_with_num" percent)
+                      "jump_to_percent_with_num" (format "%s" (car percent)))
           (eaf-call "call_function_with_args" eaf--buffer-id
                     "jump_to_page_with_num" page)
           )
         )
        ((eq major-mode 'pdf-view-mode)
-        (pdf-view-goto-page page))
+        (pdf-view-goto-page page)
+        (when (and percent (not (equal -1 (cdr percent))))
+          (counsel-xr-pdf-view-goto-percent (cdr percent)))
+        )
        ((eq major-mode 'doc-view-mode)
         (doc-view-goto-page page))
        (t
@@ -154,13 +185,14 @@
       )
      ((s-equals? type "pdf")
       (setq page (plist-get ray :page))
-      (setq percent (plist-get ray :extra))
+      (setq percent (plist-get ray :percent))
+
       (cond
        ((eq xr-open-pdf-with-eaf t)
         (eaf-open file "pdf-viewer")
-        (if percent
+        (if (and percent (not (equal -1 (car percent))))
             (eaf-call "call_function_with_args" eaf--buffer-id
-                      "jump_to_percent_with_num" percent)
+                      "jump_to_percent_with_num" (format "%s" (car percent)))
           (eaf-call "call_function_with_args" eaf--buffer-id
                     "jump_to_page_with_num" page))
         )
@@ -169,6 +201,8 @@
         (cond
          ((eq major-mode 'pdf-view-mode)
           (pdf-view-goto-page page)
+          (when (and percent (not (equal -1 (cdr percent))))
+            (counsel-xr-pdf-view-goto-percent (cdr percent)))
           )
          ((eq major-mode 'doc-view-mode)
           (doc-view-goto-page page)

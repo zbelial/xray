@@ -42,7 +42,7 @@
 ;; 4. 当前文件的ray数量显示在modeline DONE
 ;; 5. html相关 DONE
 ;; 6. 删除ray DONE
-;; 7. context
+;; 7. context DONT 
 ;; 8. 删除:viewer，添加配置指定是否用eaf打开pdf DONE
 ;; 9. 只用xr-file-rays保存ray数据 DONE
 ;; 10. 支持运行时切换file对应的ray数据保存位置(xr-directory-alist) DONE
@@ -50,6 +50,7 @@
 ;; 12. 运行时切换file对应的ray时，原ray文件要删掉旧file内容 TEMP 目前保存时会删掉 - 20200807
 ;; 13. 编辑ray（desc，topic可能没有必要） DONE
 ;; 14. truncate太长的desc（以弹窗形式展示？）
+;; 15. reload当前文件所对应xray file的数据
 
 (require 'ht)
 (require 's)
@@ -399,16 +400,13 @@ currently displayed message, if any."
     )
   )
 
-(defun xr-clear-all (&optional file-name)
+(defun xr-clear-all ()
   ""
   (interactive)
-  (let* ((file-name (or file-name (xr-buffer-file-name)))
-        (xray-file-name (xr-xray-file-name file-name)))
-    (ht-clear! xr-loaded-xray-files)
-    (ht-clear! xr-topics)
-    (ht-clear! xr-file-rays)
-    (ht-clear! xr-file-topics)
-    )
+  (ht-clear! xr-loaded-xray-files)
+  (ht-clear! xr-topics)
+  (ht-clear! xr-file-rays)
+  (ht-clear! xr-file-topics)
   )
 
 (defun xr-load-data-ensure (xray-file-name)

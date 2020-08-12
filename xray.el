@@ -49,8 +49,8 @@
 ;; 11. 查看某topic的所有ray DONE
 ;; 12. 运行时切换file对应的ray时，原ray文件要删掉旧file内容 TEMP 目前保存时会删掉 - 20200807
 ;; 13. 编辑ray（desc，topic可能没有必要） DONE
-;; 14. truncate太长的desc（以弹窗形式展示？）
-;; 15. reload当前文件所对应xray file的数据
+;; 14. truncate太长的desc（以弹窗形式展示？） NEXT
+;; 15. reload当前文件所对应xray file的数据 DONE
 
 (require 'ht)
 (require 's)
@@ -423,6 +423,16 @@ currently displayed message, if any."
      (ht-set! xr-topics xray-file-name '())
      (load-file xray-file-name)))
   )
+
+(defun xr-reload (&optional file)
+  ""
+  (interactive)
+  (let ((file (or file (xr-buffer-file-name)))
+        xray-file)
+    (when file
+      (setq xray-file (xr-xray-file-name file))
+      (xr-clear file)
+      (xr-load-data xray-file))))
 
 (defun xr-recover-file-rays(data)
   "Restore xray data."

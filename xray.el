@@ -196,7 +196,7 @@ currently displayed message, if any."
 (defun xr-new-ray-text-or-prog(file-name xray-file-name)
   "Create a new ray."
   (let ((topic (xr-select-or-add-topic file-name xray-file-name))
-        (desc (xr-add-desc))
+        (desc (xr-add-desc topic))
         (linum (xr-current-line-number))
         (context ""))
     (list :id (xr-id) :type "text" :file file-name :topic topic :desc desc :linum linum :context context)
@@ -228,7 +228,7 @@ currently displayed message, if any."
               (setq page (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
               (setq percent (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent")))
               (setq topic (xr-select-or-add-topic file-name xray-file-name))
-              (setq desc (xr-add-desc))
+              (setq desc (xr-add-desc topic))
 
               (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons percent -1))
               )
@@ -237,7 +237,7 @@ currently displayed message, if any."
      ((eq major-mode 'pdf-view-mode)
       (setq page (pdf-view-current-page))
       (setq topic (xr-select-or-add-topic file-name xray-file-name))
-      (setq desc (xr-add-desc))
+      (setq desc (xr-add-desc topic))
       (setq percent (xr-pdf-view-page-percent))
 
       (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons -1 percent))
@@ -245,7 +245,7 @@ currently displayed message, if any."
      ((eq major-mode 'pdf-view-mode)
       (setq page (doc-view-current-page))
       (setq topic (xr-select-or-add-topic file-name xray-file-name))
-      (setq desc (xr-add-desc))
+      (setq desc (xr-add-desc topic))
 
       (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons -1 percent))
       )
@@ -258,10 +258,10 @@ currently displayed message, if any."
 (defun xr-new-ray-html(file-name xray-file-name)
   "Create a new ray."
   (let ((topic (xr-select-or-add-topic file-name xray-file-name))
-          (desc (xr-add-desc))
-          (linum (xr-current-line-number))
-          (context ""))
-      (list :id (xr-id) :type "html" :file file-name :topic topic :desc desc :linum linum :context context))
+        (desc (xr-add-desc topic))
+        (linum (xr-current-line-number))
+        (context ""))
+    (list :id (xr-id) :type "html" :file file-name :topic topic :desc desc :linum linum :context context))
   )
 
 (defun xr-xray-file-name (&optional file-name)
@@ -370,9 +370,9 @@ currently displayed message, if any."
     )
   )
 
-(defun xr-add-desc ()
+(defun xr-add-desc (topic)
   "Add a desc to ray."
-  (read-string "Add an Description: " "")
+  (read-string (format "Add Description (for %s): " topic) "")
   )
 
 (defun xr-select-or-add-topic (file-name xray-file-name)

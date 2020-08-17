@@ -51,6 +51,7 @@
 ;; 13. 编辑ray（desc，topic可能没有必要） DONE
 ;; 14. truncate太长的desc（以弹窗形式展示？） NEXT
 ;; 15. reload当前文件所对应xray file的数据 DONE
+;; 16. 判断是否需要自动加载数据（git同步后文件可能会被覆盖掉）
 
 (require 'ht)
 (require 's)
@@ -103,6 +104,10 @@ key: xray file name, value: topics")
 (defvar xr-file-topics (ht-create)
   "Which topics are stored in each file.
 key: file name, value: topics")
+
+(defvar xr-latest-modified-time (ht-create)
+  "Keep track of the latest time when new xray data is added.")
+
 
 ;;; Macros
 (defmacro xr-with-message-suppression (&rest body)
@@ -192,6 +197,10 @@ currently displayed message, if any."
   ""
   (line-number-at-pos)
   )
+
+(defun xr-current-time()
+  ""
+  (time-convert nil 'integer))
 
 (defun xr-new-ray-text-or-prog(file-name xray-file-name)
   "Create a new ray."
@@ -320,9 +329,7 @@ currently displayed message, if any."
          file-name
          (file-exists-p file-name))
         (progn
-          ;; (message "xr-add-ray file-name: %s" file-name)
           (setq xray-file-name (xr-xray-file-name file-name))
-          ;; (message "xray-file-name: %s" xray-file-name)
 
           (xr-load-data-ensure xray-file-name)
 
@@ -394,6 +401,7 @@ currently displayed message, if any."
          (files (xr-files-in-xray xray-file-name)))
     (ht-remove! xr-loaded-xray-files xray-file-name)
     (ht-remove! xr-topics xray-file-name)
+    (ht-remove! xr-latest-modified-time xray-file-name)
     (dolist (file files)
       (ht-remove! xr-file-rays file)
       (ht-remove! xr-file-topics file))
@@ -407,12 +415,27 @@ currently displayed message, if any."
   (ht-clear! xr-topics)
   (ht-clear! xr-file-rays)
   (ht-clear! xr-file-topics)
+  (ht-clear! xr-latest-modified-time)
   )
+
+(defun xr-xray-file-changed-time (xray-file-name)
+  ""
+  (time-convert (file-attribute-modification-time (file-attributes xray-file-name)) 'integer)
+  )
+
+(defun xr-xray-file-outdated (xray-file-name)
+  ""
+  (let ((latest-added-time (ht-get xr-latest-modified-time xray-file-name))
+        (xray-file-changed-time (xr-xray-file-changed-time xray-file-name))
+        (current-time (time-convert nil 'integer))
+        )
+    (< latest-added-time xray-file-changed-time)))
 
 (defun xr-load-data-ensure (xray-file-name)
   ""
   ;; (message "xray-file-name %s" xray-file-name)
-  (when (not (ht-contains-p xr-loaded-xray-files xray-file-name))
+  (when (or (not (ht-contains-p xr-loaded-xray-files xray-file-name))
+            (xr-xray-file-outdated xray-file-name))
     (xr-load-data xray-file-name)))
 
 (defun xr-load-data (xray-file-name)
@@ -421,6 +444,7 @@ currently displayed message, if any."
    (when (f-exists-p xray-file-name)
      (ht-set! xr-loaded-xray-files xray-file-name t)
      (ht-set! xr-topics xray-file-name '())
+     (ht-set! xr-latest-modified-time xray-file-name (time-convert nil 'integer))
      (load-file xray-file-name)))
   )
 
@@ -537,6 +561,11 @@ currently displayed message, if any."
         (add-to-list 'files file)))
     files))
 
+
+(defun xr-update-modified-time (xray-file-name)
+  ""
+  (ht-set xr-latest-modified-time xray-file-name (xr-current-time)))
+
 (defun xr-save-rays (xray-file-name &optional files)
   ""
   (with-temp-file xray-file-name
@@ -544,32 +573,34 @@ currently displayed message, if any."
     (insert ";;; -*- mode: emacs-lisp -*-\n")
     )
 
+  (xr-update-modified-time xray-file-name)
+
   (dolist (file (or files (xr-files-in-xray xray-file-name)))
     (xr-save-file-rays xray-file-name file)
     )
   )
 
-(defun xr-save-all-rays ()
-  "Save thread data."
-  (interactive)
-  (let ((all-files (ht-keys xr-file-rays))
-        (file-groups (ht-create))
-        xray-file-name files)
-    (dolist (file-name all-files)
-      (setq xray-file-name (xr-xray-file-name file-name))
+;; (defun xr-save-all-rays ()
+;;   "Save thread data."
+;;   (interactive)
+;;   (let ((all-files (ht-keys xr-file-rays))
+;;         (file-groups (ht-create))
+;;         xray-file-name files)
+;;     (dolist (file-name all-files)
+;;       (setq xray-file-name (xr-xray-file-name file-name))
 
-      (message "xray-file-name %s" xray-file-name)
+;;       (message "xray-file-name %s" xray-file-name)
 
-      (when (not (ht-contains-p file-groups xray-file-name))
-        (ht-set! file-groups xray-file-name '()))
-      (setq files (ht-get file-groups xray-file-name))
-      (add-to-list 'files file-name)
+;;       (when (not (ht-contains-p file-groups xray-file-name))
+;;         (ht-set! file-groups xray-file-name '()))
+;;       (setq files (ht-get file-groups xray-file-name))
+;;       (add-to-list 'files file-name)
 
-      (ht-set! file-groups xray-file-name files))
+;;       (ht-set! file-groups xray-file-name files))
 
-    (ht-map #'xr-save-rays file-groups)
-    )
-  )
+;;     (ht-map #'xr-save-rays file-groups)
+;;     )
+;;   )
 
 
 ;;; Read xray and display them
@@ -593,6 +624,7 @@ currently displayed message, if any."
     (when file-name
       (setq xray-file-name (xr-xray-file-name file-name))
       (xr-load-data-ensure xray-file-name)
+
       (ht-get xr-topics xray-file-name))
     )
   )
@@ -615,6 +647,8 @@ currently displayed message, if any."
         rays all-rays)
     (when file-name
       (setq xray-file-name (xr-xray-file-name file-name))
+      (xr-load-data-ensure xray-file-name)
+
       (setq files (xr-files-in-xray xray-file-name))
       (dolist (file files)
         (setq rays (ht-get xr-file-rays file))
@@ -631,10 +665,9 @@ currently displayed message, if any."
         xray-file-name all-rays files)
     (when file-name
       (setq xray-file-name (xr-xray-file-name file-name))
-      (setq files (xr-files-in-xray xray-file-name))
-
       (xr-load-data-ensure xray-file-name)
 
+      (setq files (xr-files-in-xray xray-file-name))
       (dolist (file files)
         (dolist (ray (ht-get xr-file-rays file))
           (add-to-list 'all-rays ray))))
@@ -700,16 +733,15 @@ currently displayed message, if any."
     (when file-name
       (setq xray-file-name (xr-xray-file-name file-name))
       (setq file-rays-count (length (ht-get xr-file-rays file-name)))
-      (setq rays-count (length (xr-rays file-name))))
+      (mapcar #'(lambda (file) (setq rays-count (+ rays-count (length (ht-get xr-file-rays file)))))
+              (xr-files-in-xray xray-file-name)))
     (format "%d:%d" file-rays-count rays-count)))
 
 (defvar mode-line-xray-info '(:eval (format "  [R:%s]" (xr-mode-line))))
 ;; (setq mode-line-xray-info '(:eval (format "  [R:%s]" (xr-mode-line))))
 (put 'mode-line-xray-info 'risky-local-variable t)
 
-;; (add-to-list 'mode-line-format 'mode-line-xray-info t)
-
 ;;; Hook
-(add-hook 'kill-emacs-hook #'xr-save-all-rays)
+;; (add-hook 'kill-emacs-hook #'xr-save-all-rays)
 
 (provide 'xray)

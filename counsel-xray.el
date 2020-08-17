@@ -234,8 +234,6 @@
   (interactive)
   (let (topic
         rays)
-    ;; (ivy-read "Select a topic: " (xr-topics)
-    ;;           :action #'(lambda (cand) (setq topic cand)))
     (setq topic (completing-read "Select a topic: " (xr-topics)))
     (message "topic %s" topic)
     (setq rays (counsel-xr-topic-rays-collector topic))

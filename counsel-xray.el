@@ -62,16 +62,25 @@
 (defun counsel-xr-format-ray (ray &optional with-file)
   ""
   (if with-file
-      (format "%s - %s  %s : %d"
+      (format "%s - %s  %s"
               (plist-get ray :topic)
               (plist-get ray :desc)
-              (f-filename (plist-get ray :file))
-              (or (plist-get ray :linum) (plist-get ray :page))
+              (propertize
+               (concat "["
+                       (f-filename (plist-get ray :file))
+                       " : "
+                       (number-to-string (or (plist-get ray :linum) (plist-get ray :page)))
+                       "]")
+               'face 'shadow)
               )
-    (format "%s - %s  : %d"
+    (format "%s - %s  %s"
             (plist-get ray :topic)
             (plist-get ray :desc)
-            (or (plist-get ray :linum) (plist-get ray :page))
+            (propertize
+             (concat ": "
+                     (number-to-string (or (plist-get ray :linum) (plist-get ray :page)))
+                     )
+             'face 'shadow)
             )))
 
 (defun counsel-xr-file-rays-collector ()

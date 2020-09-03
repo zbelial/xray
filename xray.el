@@ -51,7 +51,9 @@
 ;; 13. 编辑ray（desc，topic可能没有必要） DONE
 ;; 14. truncate太长的desc（以弹窗形式展示？） NEXT
 ;; 15. reload当前文件所对应xray file的数据 DONE
-;; 16. 判断是否需要自动加载数据（git同步后文件可能会被覆盖掉）
+;; 16. 判断是否需要自动加载数据（git同步后文件可能会被覆盖掉） DONE
+;; 17. sort-fn从init.el移到这里
+;; 18. 最近的topic对应的xray记录展示在列表的最上方
 
 (require 'ht)
 (require 's)

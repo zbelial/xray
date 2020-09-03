@@ -255,5 +255,60 @@
               :caller 'counsel-xr-topic-rays
               )))
 
+(defun counsel-xr-topic-xray-sorter (&optional l r)
+  (let* ((lr (cdr l))
+         (rr (cdr r))
+         (lt (plist-get lr :topic))
+         (rt (plist-get rr :topic))
+         (lf (f-filename (plist-get lr :file)))
+         (rf (f-filename (plist-get rr :file)))
+         (lp (or (plist-get lr :linum) (plist-get lr :page)))
+         (rp (or (plist-get rr :linum) (plist-get rr :page))))
+    (cond
+     ((equal lt rt)
+      (cond
+       ((equal lf rf)
+        (< lp rp)
+        )
+       ((string< lf rf)
+        t
+        )
+       (t
+        nil
+        )))
+     ((string< lt rt)
+      t
+      )
+     (t
+      nil
+      ))
+    ))
+(ivy-configure 'counsel-xr-topic-rays
+  :sort-fn #'counsel-xr-topic-xray-sorter)
+
+(defun counsel-xr-xray-sorter (&optional l r)
+  (let* ((lr (cdr l))
+         (rr (cdr r))
+         (lt (plist-get lr :topic))
+         (rt (plist-get rr :topic))
+         (lp (or (plist-get lr :linum) (plist-get lr :page)))
+         (rp (or (plist-get rr :linum) (plist-get rr :page))))
+    (cond
+     ((equal lt rt)
+      (< lp rp)
+      )
+     ((string< lt rt)
+      t
+      )
+     (t
+      nil
+      ))
+    ))
+(ivy-configure 'counsel-xr-file-rays
+  :sort-fn #'counsel-xr-xray-sorter)
+(ivy-configure 'counsel-xr-rays
+  :sort-fn #'counsel-xr-xray-sorter)
+
+
 
 (provide 'counsel-xray)

@@ -37,6 +37,7 @@
 
 (require 'f)
 (require 'xray)
+(require 'ivy)
 
 (declare-function pdf-view-goto-page "ext:pdf-view")
 (declare-function doc-view-goto-page "doc-view")

@@ -132,7 +132,9 @@
   (let* ((ray (cdr cand))
          (file (plist-get ray :file))
          (type (plist-get ray :type))
+         (topic (plist-get ray :topic))
          page linum percent)
+    (setq xr-recent-topic topic)
     (cond
      ((s-equals? type "text")
       (setq linum (plist-get ray :linum))
@@ -184,7 +186,9 @@
   (let* ((ray (cdr cand))
          (file (plist-get ray :file))
          (type (plist-get ray :type))
+         (topic (plist-get ray :topic))
          page linum percent)
+    (setq xr-recent-topic topic)
     (cond
      ((s-equals? type "text")
       (find-file file)
@@ -256,54 +260,64 @@
               )))
 
 (defun counsel-xr-topic-xray-sorter (&optional l r)
-  (let* ((lr (cdr l))
-         (rr (cdr r))
-         (lt (plist-get lr :topic))
-         (rt (plist-get rr :topic))
-         (lf (f-filename (plist-get lr :file)))
-         (rf (f-filename (plist-get rr :file)))
-         (lp (or (plist-get lr :linum) (plist-get lr :page)))
-         (rp (or (plist-get rr :linum) (plist-get rr :page))))
+  (let* ((lray (cdr l))
+         (rray (cdr r))
+         (ltopic (plist-get lray :topic))
+         (rtopic (plist-get rray :topic))
+         (lf (f-filename (plist-get lray :file)))
+         (rf (f-filename (plist-get rray :file)))
+         (lpos (or (plist-get lray :linum) (plist-get lray :page)))
+         (rpos (or (plist-get rray :linum) (plist-get rray :page))))
     (cond
-     ((equal lt rt)
+     ((and (equal ltopic xr-recent-topic) (equal rtopic xr-recent-topic))
       (cond
        ((equal lf rf)
-        (< lp rp)
-        )
+        (< lpos rpos))
        ((string< lf rf)
-        t
-        )
+        t)
        (t
-        nil
-        )))
-     ((string< lt rt)
-      t
-      )
+        nil)))
+     ((equal ltopic xr-recent-topic)
+      t)
+     ((equal rtopic xr-recent-topic)
+      nil)
+     ((equal ltopic rtopic)
+      (cond
+       ((equal lf rf)
+        (< lpos rpos))
+       ((string< lf rf)
+        t)
+       (t
+        nil)))
+     ((string< ltopic rtopic)
+      t)
      (t
-      nil
-      ))
-    ))
+      nil))))
+
 (ivy-configure 'counsel-xr-topic-rays
   :sort-fn #'counsel-xr-topic-xray-sorter)
 
 (defun counsel-xr-xray-sorter (&optional l r)
-  (let* ((lr (cdr l))
-         (rr (cdr r))
-         (lt (plist-get lr :topic))
-         (rt (plist-get rr :topic))
-         (lp (or (plist-get lr :linum) (plist-get lr :page)))
-         (rp (or (plist-get rr :linum) (plist-get rr :page))))
+  (let* ((lray (cdr l))
+         (rray (cdr r))
+         (ltopic (plist-get lray :topic))
+         (rtopic (plist-get rray :topic))
+         (lpos (or (plist-get lray :linum) (plist-get lray :page)))
+         (rpos (or (plist-get rray :linum) (plist-get rray :page))))
     (cond
-     ((equal lt rt)
-      (< lp rp)
-      )
-     ((string< lt rt)
-      t
-      )
+     ((and (equal ltopic xr-recent-topic) (equal rtopic xr-recent-topic))
+      (< lpos rpos))
+     ((equal ltopic xr-recent-topic)
+      t)
+     ((equal rtopic xr-recent-topic)
+      nil)
+     ((equal ltopic rtopic)
+      (< lpos rpos))
+     ((string< ltopic rtopic)
+      t)
      (t
-      nil
-      ))
-    ))
+      nil))))
+
 (ivy-configure 'counsel-xr-file-rays
   :sort-fn #'counsel-xr-xray-sorter)
 (ivy-configure 'counsel-xr-rays

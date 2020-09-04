@@ -326,7 +326,7 @@ currently displayed message, if any."
   "Create a new ray and add it to xray file."
   (interactive)
   (let* ((file-name (xr-buffer-file-name))
-         xray-file-name rays
+         xray-file-name rays topic topics
          ray)
     (if (and
          file-name
@@ -344,7 +344,13 @@ currently displayed message, if any."
           (add-to-list 'rays ray t)
           (ht-set! xr-file-rays file-name rays)
 
-          (setq xr-recent-topic (plist-get ray :topic))
+          (setq topic (plist-get ray :topic))
+          (setq topics (ht-get xr-topics xray-file-name))
+          (when (not (member topic topics))
+            (add-to-list 'topics topic)
+            (ht-set! xr-topics xray-file-name topics))
+
+          (setq xr-recent-topic topic)
 
           (xr-save-rays xray-file-name)
           )
@@ -390,11 +396,7 @@ currently displayed message, if any."
 (defun xr-select-or-add-topic (file-name xray-file-name)
   "Select from the existing titles or create a new one."
   (let* ((topics (ht-get xr-topics xray-file-name))
-         (topic (completing-read "Select or create a topic: " topics))
-         desc)
-    (when (not (member topic topics))
-      (add-to-list 'topics topic)
-      (ht-set! xr-topics xray-file-name topics))
+         (topic (completing-read "Select or create a topic: " topics)))
     topic))
 
 ;;; Load xray data

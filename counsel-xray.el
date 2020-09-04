@@ -38,6 +38,7 @@
 (require 'f)
 (require 'xray)
 (require 'ivy)
+(require 'compile) ;; compilation-info-face, compilation-line-face
 
 (declare-function pdf-view-goto-page "ext:pdf-view")
 (declare-function doc-view-goto-page "doc-view")
@@ -64,24 +65,26 @@
   ""
   (if with-file
       (format "%s - %s  %s"
-              (plist-get ray :topic)
+              (propertize (plist-get ray :topic) 'face compilation-info-face)
+              ;; (plist-get ray :topic)
               (plist-get ray :desc)
               (propertize
                (concat "["
                        (f-filename (plist-get ray :file))
-                       " : "
+                       ":"
                        (number-to-string (or (plist-get ray :linum) (plist-get ray :page)))
                        "]")
-               'face 'shadow)
+               'face compilation-line-face)
               )
     (format "%s - %s  %s"
-            (plist-get ray :topic)
+            (propertize (plist-get ray :topic) 'face compilation-info-face)
+            ;; (plist-get ray :topic)
             (plist-get ray :desc)
             (propertize
-             (concat ": "
+             (concat ":"
                      (number-to-string (or (plist-get ray :linum) (plist-get ray :page)))
                      )
-             'face 'shadow)
+             'face compilation-line-face)
             )))
 
 (defun counsel-xr-file-rays-collector ()

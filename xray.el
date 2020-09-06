@@ -54,6 +54,7 @@
 ;; 16. 判断是否需要自动加载数据（git同步后文件可能会被覆盖掉） DONE
 ;; 17. sort-fn从init.el移到这里 DONE
 ;; 18. 最近的topic对应的xray记录展示在列表的最上方 DONE
+;; 19. modeline展示Emacs当前可见区域/当前页（pdf）有几个xray。
 
 (require 'ht)
 (require 's)
@@ -84,6 +85,12 @@ The rays added to files in the first directory will be saved to second directory
 
 (defcustom xr-open-pdf-with-eaf nil
   "When non-nil, use eaf-open to open pdf files."
+  :group 'xray
+  :type 'boolean)
+
+
+(defcustom xr-show-visible-area-xray-count nil
+  "When non-nil, show how many xray in visible area of current buffer."
   :group 'xray
   :type 'boolean)
 
@@ -207,7 +214,7 @@ currently displayed message, if any."
 
 (defun xr-new-ray-text-or-prog(file-name xray-file-name)
   "Create a new ray."
-  (let ((topic (xr-select-or-add-topic file-name xray-file-name))
+  (let* ((topic (xr-select-or-add-topic file-name xray-file-name))
         (desc (xr-add-desc topic))
         (linum (xr-current-line-number))
         (context ""))
@@ -226,46 +233,34 @@ currently displayed message, if any."
         ))
     percent))
 
+(defun xr-pdf-page-percent (file-name)
+  (let ((page-no 0)
+        (percent-eaf -1)
+        (percent-other -1))
+    (cond
+         ((eq major-mode 'pdf-view-mode)
+          (setq page-no (pdf-view-current-page))
+          (setq percent-other (xr-pdf-view-page-percent)))
+         ((eq major-mode 'doc-view-mode)
+          (setq page-no (doc-view-current-page)))
+         ((eq major-mode 'eaf-mode)
+          (setq page-no (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
+          (setq percent-eaf (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent"))))
+         (t
+          (user-error (format "%s" "Unsupported mode."))))
+    (list page-no percent-eaf percent-other)))
+
 (defun xr-new-ray-pdf(file-name &optional xray-file-name)
   "Create a new ray."
-  (let ((xray-file-name (or xray-file-name (xr-xray-file-name file-name))))
-    (cond
-     ((eq major-mode 'eaf-mode)
-      (let* ((app eaf--buffer-app-name)
-             (percent 0)
-             page topic desc
-             )
-        (if (string-equal app "pdf-viewer")
-            (progn
-              (setq page (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
-              (setq percent (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent")))
-              (setq topic (xr-select-or-add-topic file-name xray-file-name))
-              (setq desc (xr-add-desc topic))
-
-              (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons percent -1))
-              )
-          (user-error "Not an eaf pdf viewer buffer.")))
-      )
-     ((eq major-mode 'pdf-view-mode)
-      (setq page (pdf-view-current-page))
-      (setq topic (xr-select-or-add-topic file-name xray-file-name))
-      (setq desc (xr-add-desc topic))
-      (setq percent (xr-pdf-view-page-percent))
-
-      (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons -1 percent))
-      )
-     ((eq major-mode 'pdf-view-mode)
-      (setq page (doc-view-current-page))
-      (setq topic (xr-select-or-add-topic file-name xray-file-name))
-      (setq desc (xr-add-desc topic))
-
-      (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons -1 percent))
-      )
-     (t
-      (user-error "%s" "Unsupported mode."))
-     )
-    )
-  )
+  (let* ((xray-file-name (or xray-file-name (xr-xray-file-name file-name)))
+         (page-percent (xr-pdf-page-percent file-name))
+         (page (nth 0 page-percent))
+         (percent-eaf (nth 1 page-percent))
+         (percent-other (nth 2 page-percent))
+         topic desc)
+    (setq topic (xr-select-or-add-topic file-name xray-file-name))
+    (setq desc (xr-add-desc topic))
+    (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons percent-eaf percent-other))))
 
 (defun xr-new-ray-html(file-name xray-file-name)
   "Create a new ray."
@@ -732,8 +727,44 @@ currently displayed message, if any."
 
 
 ;;; Other 
+
+(defun xr-visible-area-xray-count (&optional file-name)
+  (let ((file-name (xr-buffer-file-name))
+        (count 0)
+        begin-line end-line page-no xray-line xray-page-no
+        xray-file-name xrays)
+    (when file-name
+      (setq xray-file-name (xr-xray-file-name file-name))
+      (setq xrays (xr-rays-in-file file-name))
+      (cond
+       ((or (derived-mode-p 'text-mode)
+            (derived-mode-p 'prog-mode))
+        (save-excursion
+          (move-to-window-line-top-bottom 0)
+          (setq begin-line (line-number-at-pos))
+          (move-to-window-line-top-bottom -1)
+          (setq end-line (line-number-at-pos)))
+        (dolist (ray xrays)
+          (setq xray-line (plist-get ray :linum))
+          (when (and (>= xray-line begin-line)
+                     (<= xray-line end-line))
+            (setq count (1+ count))
+            )))
+       ((s-suffix? ".pdf" file-name t)
+        (setq page-no (nth 0 (xr-pdf-page-percent file-name)))
+        
+        (dolist (ray xrays)
+          (setq xray-page-no (plist-get ray :page))
+          (when (= page-no xray-page-no)
+            (setq count  (1+ count)))))
+       (t
+        (user-error (format "%s" "Unsupported file type."))))
+      )
+    count))
+
 (defun xr-mode-line ()
   (let ((file-name (xr-buffer-file-name))
+        (visible-rays-count 0)
         (file-rays-count 0)
         (rays-count 0)
         xray-file-name)
@@ -741,8 +772,12 @@ currently displayed message, if any."
       (setq xray-file-name (xr-xray-file-name file-name))
       (setq file-rays-count (length (ht-get xr-file-rays file-name)))
       (mapcar #'(lambda (file) (setq rays-count (+ rays-count (length (ht-get xr-file-rays file)))))
-              (xr-files-in-xray xray-file-name)))
-    (format "%d:%d" file-rays-count rays-count)))
+              (xr-files-in-xray xray-file-name))
+      (when xr-show-visible-area-xray-count
+        (setq visible-rays-count (xr-visible-area-xray-count file-name))))
+    (if xr-show-visible-area-xray-count
+        (format "%d:%d:%d" visible-rays-count file-rays-count rays-count)
+      (format "%d:%d" file-rays-count rays-count))))
 
 (defvar mode-line-xray-info '(:eval (format "  [R:%s]" (xr-mode-line))))
 ;; (setq mode-line-xray-info '(:eval (format "  [R:%s]" (xr-mode-line))))

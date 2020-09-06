@@ -87,6 +87,13 @@
              'face compilation-line-face)
             )))
 
+(defun counsel-xr-visible-area-rays-collector ()
+  ""
+  (let ((rays (xr-rays-in-visible-area (xr-buffer-file-name))))
+    (mapcar #'(lambda (ray)
+                (cons (counsel-xr-format-ray ray) ray))
+            rays)))
+
 (defun counsel-xr-file-rays-collector ()
   ""
   (let ((rays (xr-rays-in-file (xr-buffer-file-name))))
@@ -173,6 +180,19 @@
       (goto-line linum)
       (recenter)
       ))))
+
+(defun counsel-xr-visible-area-rays ()
+  (interactive)
+  (let ((rays (counsel-xr-visible-area-rays-collector)))
+    (ivy-read "Rays: " rays
+              :action '(1
+                        ("o" counsel-xr-file-rays-jump "jump to ray")
+                        ("d" counsel-xr-delete-ray "delete a ray")
+                        ("e" counsel-xr-edit-ray "edit a ray's desc")
+                        )
+              :caller 'counsel-xr-visible-area-rays
+              )))
+
 
 (defun counsel-xr-file-rays ()
   (interactive)
@@ -322,6 +342,8 @@
      (t
       nil))))
 
+(ivy-configure 'counsel-xr-visible-area-rays
+  :sort-fn #'counsel-xr-xray-sorter)
 (ivy-configure 'counsel-xr-file-rays
   :sort-fn #'counsel-xr-xray-sorter)
 (ivy-configure 'counsel-xr-rays

@@ -631,6 +631,37 @@ currently displayed message, if any."
     )
   )
 
+(defun xr-rays-in-visible-area (&optional file-name)
+  (let ((file-name (xr-buffer-file-name))
+        begin-line end-line page-no xray-line xray-page-no
+        rays visible-rays)
+    (when file-name
+      (setq rays (xr-rays-in-file file-name))
+      (cond
+       ((or (derived-mode-p 'text-mode)
+            (derived-mode-p 'prog-mode))
+        (save-excursion
+          (move-to-window-line-top-bottom 0)
+          (setq begin-line (line-number-at-pos))
+          (move-to-window-line-top-bottom -1)
+          (setq end-line (line-number-at-pos)))
+        (dolist (ray rays)
+          (setq xray-line (plist-get ray :linum))
+          (when (and (>= xray-line begin-line)
+                     (<= xray-line end-line))
+            (add-to-list 'visible-rays ray))))
+       ((s-suffix? ".pdf" file-name t)
+        (setq page-no (nth 0 (xr-pdf-page-percent file-name)))
+        
+        (dolist (ray rays)
+          (setq xray-page-no (plist-get ray :page))
+          (when (= page-no xray-page-no)
+            (add-to-list 'visible-rays ray))))
+       (t
+        (user-error (format "%s" "Unsupported file type."))))
+      )
+    visible-rays))
+
 (defun xr-rays-in-file (&optional file-name)
   "Rays in current file."
   (interactive)

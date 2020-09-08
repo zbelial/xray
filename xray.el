@@ -56,6 +56,8 @@
 ;; 18. 最近的topic对应的xray记录展示在列表的最上方 DONE
 ;; 19. modeline展示Emacs当前可见区域/当前页（pdf）有几个xray。DONE
 ;; 20. 给ray添加一个orgmode文件来记录长笔记，列表里对于这种ray要特别显示。
+;; 21. 将同一topic的ray记录导出到org-roam中。如何处理跟以前导出的文件的冲突问题？
+;; 22. eaf/pdf-tools记录文档percent/页面percent。 DONE
 
 (require 'ht)
 (require 's)
@@ -234,6 +236,12 @@ currently displayed message, if any."
         ))
     percent))
 
+(defun xr-pdf-view-percent ()
+  (let ((page-percent (xr-pdf-view-page-percent))
+        (current-page (pdf-view-current-page))
+        (total-page (pdf-cache-number-of-pages)))
+    (/ (+ (1- current-page) page-percent) total-page)))
+
 (defun xr-pdf-page-percent (file-name)
   (let ((page-no 0)
         (percent-eaf -1)
@@ -241,12 +249,14 @@ currently displayed message, if any."
     (cond
          ((eq major-mode 'pdf-view-mode)
           (setq page-no (pdf-view-current-page))
-          (setq percent-other (xr-pdf-view-page-percent)))
+          (setq percent-eaf (* 100 (xr-pdf-view-percent)))
+          (setq percent-other (* 100 (xr-pdf-view-page-percent))))
          ((eq major-mode 'doc-view-mode)
           (setq page-no (doc-view-current-page)))
          ((eq major-mode 'eaf-mode)
           (setq page-no (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
-          (setq percent-eaf (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent"))))
+          (setq percent-eaf (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent")))
+          (setq percent-other (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page_percent"))))
          (t
           (user-error (format "%s" "Unsupported mode."))))
     (list page-no percent-eaf percent-other)))

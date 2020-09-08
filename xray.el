@@ -54,7 +54,8 @@
 ;; 16. 判断是否需要自动加载数据（git同步后文件可能会被覆盖掉） DONE
 ;; 17. sort-fn从init.el移到这里 DONE
 ;; 18. 最近的topic对应的xray记录展示在列表的最上方 DONE
-;; 19. modeline展示Emacs当前可见区域/当前页（pdf）有几个xray。
+;; 19. modeline展示Emacs当前可见区域/当前页（pdf）有几个xray。DONE
+;; 20. 给ray添加一个orgmode文件来记录长笔记，列表里对于这种ray要特别显示。
 
 (require 'ht)
 (require 's)

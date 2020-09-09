@@ -236,20 +236,20 @@ currently displayed message, if any."
         ))
     percent))
 
-(defun xr-pdf-view-percent ()
+(defun xr-pdf-view-total-percent ()
   (let ((page-percent (xr-pdf-view-page-percent))
         (current-page (pdf-view-current-page))
         (total-page (pdf-cache-number-of-pages)))
     (/ (+ (1- current-page) page-percent) total-page)))
 
-(defun xr-pdf-page-percent (file-name)
+(defun xr-pdf-page-and-percent (file-name)
   (let ((page-no 0)
         (percent-eaf -1)
         (percent-other -1))
     (cond
          ((eq major-mode 'pdf-view-mode)
           (setq page-no (pdf-view-current-page))
-          (setq percent-eaf (* 100 (xr-pdf-view-percent)))
+          (setq percent-eaf (* 100 (xr-pdf-view-total-percent)))
           (setq percent-other (* 100 (xr-pdf-view-page-percent))))
          ((eq major-mode 'doc-view-mode)
           (setq page-no (doc-view-current-page)))
@@ -264,7 +264,7 @@ currently displayed message, if any."
 (defun xr-new-ray-pdf(file-name &optional xray-file-name)
   "Create a new ray."
   (let* ((xray-file-name (or xray-file-name (xr-xray-file-name file-name)))
-         (page-percent (xr-pdf-page-percent file-name))
+         (page-percent (xr-pdf-page-and-percent file-name))
          (page (nth 0 page-percent))
          (percent-eaf (nth 1 page-percent))
          (percent-other (nth 2 page-percent))
@@ -662,7 +662,7 @@ currently displayed message, if any."
                      (<= xray-line end-line))
             (add-to-list 'visible-rays ray))))
        ((s-suffix? ".pdf" file-name t)
-        (setq page-no (nth 0 (xr-pdf-page-percent file-name)))
+        (setq page-no (nth 0 (xr-pdf-page-and-percent file-name)))
         
         (dolist (ray rays)
           (setq xray-page-no (plist-get ray :page))
@@ -747,6 +747,8 @@ currently displayed message, if any."
     (setq new-topic (read-string "New topic: " topic nil topic))
     (setq new-desc (read-string "New desc: " desc nil desc))
 
+    (setq xr-recent-topic new-topic)
+
     (when (or (not (s-equals-p topic new-topic)) (not (s-equals-p desc new-desc)))
       (setq file-rays (remove-if #'(lambda (ray)
                                      (equal id (plist-get ray :id)))
@@ -793,7 +795,7 @@ currently displayed message, if any."
             (setq count (1+ count))
             )))
        ((s-suffix? ".pdf" file-name t)
-        (setq page-no (nth 0 (xr-pdf-page-percent file-name)))
+        (setq page-no (nth 0 (xr-pdf-page-and-percent file-name)))
         
         (dolist (ray xrays)
           (setq xray-page-no (plist-get ray :page))

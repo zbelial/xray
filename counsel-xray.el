@@ -41,6 +41,7 @@
 (require 'compile) ;; compilation-info-face, compilation-line-face
 
 (declare-function pdf-view-goto-page "ext:pdf-view")
+(declare-function pdf-view-image-size "ext:pdf-view")
 (declare-function doc-view-goto-page "doc-view")
 
 ;;; Read xray and display them
@@ -115,29 +116,13 @@
                 (cons (counsel-xr-format-ray ray t) ray))
             rays)))
 
-(defun counsel-xr-doc-get-page-slice ()
-  "Return (slice-top . slice-height)."
-  (let* ((slice (or (image-mode-window-get 'slice) '(0 0 1 1)))
-         (slice-top (float (nth 1 slice)))
-         (slice-height (float (nth 3 slice))))
-    (when (or (> slice-top 1)
-              (> slice-height 1))
-      (let ((height (cdr (image-size (image-mode-window-get 'image) t))))
-        (setq slice-top (/ slice-top height)
-              slice-height (/ slice-height height))))
-    (cons slice-top slice-height)))
-
-(defun counsel-xr-conv-page-percentage-scroll (percentage)
-  (let* ((slice (counsel-xr-doc-get-page-slice))
-         (display-height (cdr (image-display-size (image-get-display-property))))
-         (display-percentage (min 1 (max 0 (/ (- percentage (car slice)) (cdr slice)))))
-         (scroll (max 0 (floor (* display-percentage display-height)))))
-    scroll))
-
 (defun counsel-xr-pdf-view-goto-percent (percent)
-  ""
-  (image-scroll-up (- (counsel-xr-conv-page-percentage-scroll percent)
-                      (window-vscroll))))
+  (let ((size (pdf-view-image-size t)))
+    (image-set-window-vscroll
+     (round (/ (* percent (cdr size))
+               (if pdf-view-have-image-mode-pixel-vscroll
+                   1
+                 (frame-char-height)))))))
 
 (defun counsel-xr-file-rays-jump (cand)
   (let* ((ray (cdr cand))
@@ -168,7 +153,7 @@
        ((eq major-mode 'pdf-view-mode)
         (pdf-view-goto-page page)
         (when (and percent (not (equal -1 (cdr percent))))
-          (counsel-xr-pdf-view-goto-percent (cdr percent)))
+          (counsel-xr-pdf-view-goto-percent (/ (cdr percent) 100.0)))
         )
        ((eq major-mode 'doc-view-mode)
         (doc-view-goto-page page))
@@ -239,7 +224,7 @@
          ((eq major-mode 'pdf-view-mode)
           (pdf-view-goto-page page)
           (when (and percent (not (equal -1 (cdr percent))))
-            (counsel-xr-pdf-view-goto-percent (cdr percent)))
+            (counsel-xr-pdf-view-goto-percent (/ (cdr percent) 100.0)))
           )
          ((eq major-mode 'doc-view-mode)
           (doc-view-goto-page page)

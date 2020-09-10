@@ -58,6 +58,7 @@
 ;; 20. 给ray添加一个orgmode文件来记录长笔记，列表里对于这种ray要特别显示。
 ;; 21. 将同一topic的ray记录导出到org-roam中。如何处理跟以前导出的文件的冲突问题？
 ;; 22. eaf/pdf-tools记录文档percent/页面percent。 DONE
+;; 23. recent-topic按xr-xray-file粒度记录，并记录到xr-xray-file中。
 
 (require 'ht)
 (require 's)

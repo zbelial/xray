@@ -130,7 +130,7 @@
          (type (plist-get ray :type))
          (topic (plist-get ray :topic))
          page linum percent)
-    (setq xr-recent-topic topic)
+    (xr-update-recent-topic file topic)
     (cond
      ((s-equals? type "text")
       (setq linum (plist-get ray :linum))
@@ -197,7 +197,7 @@
          (type (plist-get ray :type))
          (topic (plist-get ray :topic))
          page linum percent)
-    (setq xr-recent-topic topic)
+    (xr-update-recent-topic file topic)
     (cond
      ((s-equals? type "text")
       (find-file file)
@@ -276,9 +276,10 @@
          (lf (f-filename (plist-get lray :file)))
          (rf (f-filename (plist-get rray :file)))
          (lpos (or (plist-get lray :linum) (plist-get lray :page)))
-         (rpos (or (plist-get rray :linum) (plist-get rray :page))))
+         (rpos (or (plist-get rray :linum) (plist-get rray :page)))
+         (recent-topic (xr-recent-topic lf)))
     (cond
-     ((and (equal ltopic xr-recent-topic) (equal rtopic xr-recent-topic))
+     ((and (equal ltopic recent-topic) (equal rtopic recent-topic))
       (cond
        ((equal lf rf)
         (< lpos rpos))
@@ -286,9 +287,9 @@
         t)
        (t
         nil)))
-     ((equal ltopic xr-recent-topic)
+     ((equal ltopic recent-topic)
       t)
-     ((equal rtopic xr-recent-topic)
+     ((equal rtopic recent-topic)
       nil)
      ((equal ltopic rtopic)
       (cond
@@ -312,13 +313,14 @@
          (ltopic (plist-get lray :topic))
          (rtopic (plist-get rray :topic))
          (lpos (or (plist-get lray :linum) (plist-get lray :page)))
-         (rpos (or (plist-get rray :linum) (plist-get rray :page))))
+         (rpos (or (plist-get rray :linum) (plist-get rray :page)))
+         (recent-topic (xr-recent-topic (plist-get lray :file))))
     (cond
-     ((and (equal ltopic xr-recent-topic) (equal rtopic xr-recent-topic))
+     ((and (equal ltopic recent-topic) (equal rtopic recent-topic))
       (< lpos rpos))
-     ((equal ltopic xr-recent-topic)
+     ((equal ltopic recent-topic)
       t)
-     ((equal rtopic xr-recent-topic)
+     ((equal rtopic recent-topic)
       nil)
      ((equal ltopic rtopic)
       (< lpos rpos))
@@ -327,8 +329,8 @@
      (t
       nil))))
 
-(ivy-configure 'counsel-xr-visible-area-rays
-  :sort-fn #'counsel-xr-xray-sorter)
+;; (ivy-configure 'counsel-xr-visible-area-rays
+;;   :sort-fn #'counsel-xr-xray-sorter)
 (ivy-configure 'counsel-xr-file-rays
   :sort-fn #'counsel-xr-xray-sorter)
 (ivy-configure 'counsel-xr-rays

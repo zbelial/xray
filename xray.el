@@ -249,7 +249,7 @@ currently displayed message, if any."
         )
        total-page)))
 
-(defun xr-pdf-page-and-percent (file-name)
+(defun xr-pdf-page-and-percent (&optional file-name)
   (let ((page-no 0)
         (percent-eaf -1)
         (percent-other -1))

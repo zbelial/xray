@@ -371,9 +371,9 @@ currently displayed message, if any."
 
           (setq topic (plist-get ray :topic))
           (setq topics (ht-get xr-topics xray-file-name))
-          (when (not (member topic topics))
-            (add-to-list 'topics topic)
-            (ht-set! xr-topics xray-file-name topics))
+          (setq topics (delete topic topics))
+          (add-to-list 'topics topic)
+          (ht-set! xr-topics xray-file-name topics)
 
           (xr-update-recent-topic file-name topic)
 

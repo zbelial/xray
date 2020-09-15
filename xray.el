@@ -59,6 +59,7 @@
 ;; 21. 将同一topic的ray记录导出到org-roam中。如何处理跟以前导出的文件的冲突问题？
 ;; 22. eaf/pdf-tools记录文档percent/页面percent。 DONE
 ;; 23. recent-topic按xr-xray-file粒度记录，并记录到xr-xray-file中。DONE
+;; 24. recent-topic按xr-xray-file粒度记录，并记录到xr-xray-file中，跟23不同的是要单独记录，并按顺序记录多个。TODO
 
 (require 'ht)
 (require 's)
@@ -117,7 +118,9 @@ key: file name, value: topics")
 (defvar xr-latest-modified-time (ht-create)
   "Keep track of the latest time when new xray data is added.")
 
-(defvar xr-recent-topics (ht-create))
+(defvar xr-recent-topics (ht-create)
+  "Keep track of recently visited topics for each xray file.
+key: xray-file-name, value: topics")
 
 ;;; Macros
 (defmacro xr-with-message-suppression (&rest body)

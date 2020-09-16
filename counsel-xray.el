@@ -39,18 +39,13 @@
 (require 'xray)
 (require 'ivy)
 (require 'compile) ;; compilation-info-face, compilation-line-face
+(require 'seq)
 
 (declare-function pdf-view-goto-page "ext:pdf-view")
 (declare-function pdf-view-image-size "ext:pdf-view")
 (declare-function doc-view-goto-page "doc-view")
 
 ;;; Read xray and display them
-
-(defvar counsel-xr-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-k") 'counsel-xr-delete-ray)
-    map))
-
 
 (defun counsel-xr-delete-ray (cand)
   ""
@@ -67,7 +62,6 @@
   (if with-file
       (format "%s - %s  %s"
               (propertize (plist-get ray :topic) 'face compilation-info-face)
-              ;; (plist-get ray :topic)
               (plist-get ray :desc)
               (propertize
                (concat "["
@@ -100,21 +94,21 @@
   (let ((rays (xr-rays-in-file (xr-buffer-file-name))))
     (mapcar #'(lambda (ray)
                 (cons (counsel-xr-format-ray ray) ray))
-            rays)))
+            (counsel-xr-sort-rays rays (xr-recent-topics (xr-buffer-file-name))))))
 
 (defun counsel-xr-rays-collector ()
   ""
   (let ((rays (xr-rays (xr-buffer-file-name))))
     (mapcar #'(lambda (ray)
                 (cons (counsel-xr-format-ray ray t) ray))
-            rays)))
+            (counsel-xr-sort-rays rays (xr-recent-topics (xr-buffer-file-name))))))
 
 (defun counsel-xr-topic-rays-collector (topic)
   ""
   (let ((rays (xr-rays-of-topic topic)))
     (mapcar #'(lambda (ray)
                 (cons (counsel-xr-format-ray ray t) ray))
-            rays)))
+            (counsel-xr-sort-rays rays (xr-recent-topics (xr-buffer-file-name))))))
 
 (defun counsel-xr-pdf-view-goto-percent (percent)
   (let ((size (pdf-view-image-size t)))
@@ -130,7 +124,7 @@
          (type (plist-get ray :type))
          (topic (plist-get ray :topic))
          page linum percent)
-    (xr-update-recent-topic file topic)
+    (xr-update-recent-topics file topic)
     (cond
      ((s-equals? type "text")
       (setq linum (plist-get ray :linum))
@@ -197,7 +191,7 @@
          (type (plist-get ray :type))
          (topic (plist-get ray :topic))
          page linum percent)
-    (xr-update-recent-topic file topic)
+    (xr-update-recent-topics file topic)
     (cond
      ((s-equals? type "text")
       (find-file file)
@@ -268,29 +262,44 @@
               :caller 'counsel-xr-topic-rays
               )))
 
-(defun counsel-xr-topic-xray-sorter (&optional l r)
-  (let* ((lray (cdr l))
-         (rray (cdr r))
-         (ltopic (plist-get lray :topic))
+(defun counsel-xr-sort-filter (rays topic)
+  (let (filtered
+        rt)
+    (dolist (ray rays)
+      (setq rt (plist-get ray :topic))
+      (when (s-equals-p rt topic)
+        (add-to-list 'filtered ray)))
+    filtered))
+
+;; FIXME not efficient
+(defun counsel-xr-sort-rays (rays recent-topics &optional cmp-file)
+  (if recent-topics
+      (let ((rrays rays)
+            sorted
+            fr)
+        (dolist (topic recent-topics)
+          (setq fr (counsel-xr-sort-filter rrays topic))
+          (when fr
+            (setq rrays (seq-filter #'(lambda (ray) (not (s-equals-p (plist-get ray :topic) topic))) rrays))
+            (setq sorted (append sorted
+                                 (if cmp-file
+                                     (sort fr #'counsel-xr-topic-xray-sorter)
+                                   (sort fr #'counsel-xr-xray-sorter))))))
+        (append sorted (if cmp-file
+                           (sort rrays #'counsel-xr-topic-xray-sorter)
+                         (sort rrays #'counsel-xr-xray-sorter))))
+    (sort rays #'counsel-xr-topic-xray-sorter))
+  )
+
+(defun counsel-xr-topic-xray-sorter (&optional lray rray)
+  (let* ((ltopic (plist-get lray :topic))
          (rtopic (plist-get rray :topic))
          (lf (f-filename (plist-get lray :file)))
          (rf (f-filename (plist-get rray :file)))
          (lpos (or (plist-get lray :linum) (plist-get lray :page)))
          (rpos (or (plist-get rray :linum) (plist-get rray :page)))
-         (recent-topic (xr-recent-topic lf)))
+         )
     (cond
-     ((and (equal ltopic recent-topic) (equal rtopic recent-topic))
-      (cond
-       ((equal lf rf)
-        (< lpos rpos))
-       ((string< lf rf)
-        t)
-       (t
-        nil)))
-     ((equal ltopic recent-topic)
-      t)
-     ((equal rtopic recent-topic)
-      nil)
      ((equal ltopic rtopic)
       (cond
        ((equal lf rf)
@@ -304,38 +313,18 @@
      (t
       nil))))
 
-(ivy-configure 'counsel-xr-topic-rays
-  :sort-fn #'counsel-xr-topic-xray-sorter)
-
-(defun counsel-xr-xray-sorter (&optional l r)
-  (let* ((lray (cdr l))
-         (rray (cdr r))
-         (ltopic (plist-get lray :topic))
+(defun counsel-xr-xray-sorter (&optional lray rray)
+  (let* ((ltopic (plist-get lray :topic))
          (rtopic (plist-get rray :topic))
          (lpos (or (plist-get lray :linum) (plist-get lray :page)))
          (rpos (or (plist-get rray :linum) (plist-get rray :page)))
-         (recent-topic (xr-recent-topic (plist-get lray :file))))
+         )
     (cond
-     ((and (equal ltopic recent-topic) (equal rtopic recent-topic))
-      (< lpos rpos))
-     ((equal ltopic recent-topic)
-      t)
-     ((equal rtopic recent-topic)
-      nil)
      ((equal ltopic rtopic)
       (< lpos rpos))
      ((string< ltopic rtopic)
       t)
      (t
       nil))))
-
-;; (ivy-configure 'counsel-xr-visible-area-rays
-;;   :sort-fn #'counsel-xr-xray-sorter)
-(ivy-configure 'counsel-xr-file-rays
-  :sort-fn #'counsel-xr-xray-sorter)
-(ivy-configure 'counsel-xr-rays
-  :sort-fn #'counsel-xr-xray-sorter)
-
-
 
 (provide 'counsel-xray)

@@ -868,6 +868,21 @@ currently displayed message, if any."
                      (<= xray-line end-line))
             (setq count (1+ count))
             )))
+       ((or
+         (eq major-mode 'eww-mode)
+         (eq major-mode 'w3m-mode))
+        (save-excursion
+          (move-to-window-line-top-bottom 0)
+          (setq begin-line (line-number-at-pos))
+          (move-to-window-line-top-bottom -1)
+          (setq end-line (line-number-at-pos)))
+        (dolist (ray xrays)
+          (setq xray-line (plist-get ray :linum))
+          (when (and (>= xray-line begin-line)
+                     (<= xray-line end-line))
+            (setq count (1+ count))
+            ))
+        )
        ((s-suffix? ".pdf" file-name t)
         (setq page-no (nth 0 (xr-pdf-page-and-percent file-name)))
         
@@ -876,7 +891,9 @@ currently displayed message, if any."
           (when (= page-no xray-page-no)
             (setq count  (1+ count)))))
        (t
-        (user-error (format "%s" "Unsupported file type."))))
+        ;; (user-error (format "%s" "Unsupported file type."))
+        (setq count 0)
+        ))
       )
     count))
 

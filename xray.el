@@ -47,15 +47,15 @@
 ;; 9. 只用xr-file-rays保存ray数据 DONE
 ;; 10. 支持运行时切换file对应的ray数据保存位置(xr-directory-alist) DONE
 ;; 11. 查看某topic的所有ray DONE
-;; 12. 运行时切换file对应的ray时，原ray文件要删掉旧file内容 TEMP 目前保存时会删掉 - 20200807
+;; 12. 运行时切换file对应的ray时，原ray文件要删掉旧file内容 TEMP 目前保存时会删掉 - 20200807 DONE
 ;; 13. 编辑ray（desc，topic可能没有必要） DONE
-;; 14. truncate太长的desc（以弹窗形式展示？） NEXT
+;; 14. truncate太长的desc（以弹窗形式展示？）DONT 
 ;; 15. reload当前文件所对应xray file的数据 DONE
 ;; 16. 判断是否需要自动加载数据（git同步后文件可能会被覆盖掉） DONE
 ;; 17. sort-fn从init.el移到这里 DONE
 ;; 18. 最近的topic对应的xray记录展示在列表的最上方 DONE
 ;; 19. modeline展示Emacs当前可见区域/当前页（pdf）有几个xray。DONE
-;; 20. 给ray添加一个orgmode文件来记录长笔记，列表里对于这种ray要特别显示。TODO
+;; 20. 给ray添加一个orgmode文件来记录长笔记，列表里对于这种ray要特别显示。DONE
 ;; 21. 将同一topic的ray记录导出到org-roam中。如何处理跟以前导出的文件的冲突问题？TODO
 ;; 22. eaf/pdf-tools记录文档percent/页面percent。 DONE
 ;; 23. recent-topic按xr-xray-file粒度记录，并记录到xr-xray-file中。DONE
@@ -127,6 +127,50 @@ key: file name, value: topics")
 (defvar xr-recent-topics (ht-create)
   "Keep track of recently visited topics for each xray file.
 key: xray-file-name, value: topics")
+
+(defvar xray-note-edit-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-k") #'xray-note-edit-buffer-cancel)
+    (define-key map (kbd "C-c C-c") #'xray-note-edit-buffer-confirm)
+    map))
+
+(define-derived-mode xray-note-edit-mode text-mode "XRAY/edit"
+  "The major mode to edit xray note file.")
+
+(defun xray-note-edit-buffer-cancel ()
+  "Cancel editing note file."
+  (interactive)
+  (kill-buffer)
+  (delete-window)
+  )
+
+(defun xray-note-edit-buffer-confirm()
+  "Saves the note-editing buffer and kills the window."
+  (interactive)
+  (save-buffer)
+  (let* ((file (plist-get ray :file))
+         (xray-file (xr-xray-file-name file))
+         (xray-dir (xr-xray-file-directory file))
+         (id (plist-get ray :id))
+         (file-rays (ht-get xr-file-rays file))
+         )
+    ;; (message "before adding :note-file")
+    ;; (message "has-note %S" has-note)
+    ;; (message "note-file: %s" note-file)
+    ;; (message "id: %d" id)
+    (when (not has-note)
+      ;; (message "add :note-file")
+      (setq ray (plist-put ray :note-file (s-chop-prefix (f-full xray-dir) (f-full note-file))))
+      (setq file-rays (remove-if #'(lambda (ray)
+                                     (equal id (plist-get ray :id)))
+                                 file-rays))
+      (add-to-list 'file-rays ray)
+
+      (ht-set! xr-file-rays file file-rays)
+      (xr-save-rays xray-file)))
+  
+  (kill-buffer-and-window)
+  )
 
 ;;; Macros
 (defmacro xr-with-message-suppression (&rest body)
@@ -220,6 +264,10 @@ currently displayed message, if any."
 (defun xr-current-time()
   ""
   (time-convert nil 'integer))
+
+(defun xr-current-time-readable()
+  ""
+  (format-time-string "%Y%m%d%H%M%S"))
 
 (defun xr-new-ray-text-or-prog(file-name xray-file-name)
   "Create a new ray."
@@ -587,32 +635,35 @@ currently displayed message, if any."
   (let ((type (plist-get ray :type)))
     (cond
      ((s-equals? type "text")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\")"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\" :note-file \"%s\")"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)
               (plist-get ray :desc)
               (plist-get ray :linum)
-              (plist-get ray :context))
+              (plist-get ray :context)
+              (plist-get ray :note-file))
       )
      ((s-equals? type "pdf")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :page %d :context \"%s\" :percent %S)"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :page %d :context \"%s\" :percent %S :note-file \"%s\")"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)
               (plist-get ray :desc)
               (plist-get ray :page)
               (plist-get ray :context)
-              (plist-get ray :percent))
+              (plist-get ray :percent)
+              (plist-get ray :note-file))
       )
      ((s-equals? type "html")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\")"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\" :note-file \"%s\")"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)
               (plist-get ray :desc)
               (plist-get ray :linum)
-              (plist-get ray :context))
+              (plist-get ray :context)
+              (plist-get ray :note-file))
       )
      (t
       (user-error "%s - %s" "Invalid ray type" type))
@@ -810,6 +861,52 @@ currently displayed message, if any."
     (xr-save-rays xray-file)))
 
 ;;; Edit Ray
+(defun xr-note-file-name (xray-dir topic id)
+  (let* ((now (xr-current-time-readable))
+         (topic (nth 0 (s-split "/" topic)))
+         (dir (concat (f-slash xray-dir) "notes/"))
+         (filename (concat (f-slash xray-dir) "notes/" topic "-" (number-to-string id) ".org")))
+    (f-full filename)))
+
+
+(defun xr-edit-or-add-note (ray)
+  (let* ((file (plist-get ray :file))
+         (xray-file (xr-xray-file-name file))
+         (xray-dir (xr-xray-file-directory file))
+         (topic (plist-get ray :topic))
+         (id (plist-get ray :id))
+         (note-file (plist-get ray :note-file))
+         has-note)
+    (if note-file
+        (progn
+          (setq note-file (expand-file-name note-file xray-dir))
+          (setq has-note t))
+      (setq note-file (xr-note-file-name xray-dir topic id)))
+
+    (find-file-other-window note-file)
+    (with-current-buffer (current-buffer)
+      (org-mode)
+      (outline-show-all)
+      (end-of-buffer)
+      (local-set-key (kbd "C-c C-c") 'xray-note-edit-buffer-confirm)
+      (local-set-key (kbd "C-c C-k") 'xray-note-edit-buffer-cancel)
+      (xr-edit-set-header-line)
+      (set (make-local-variable 'has-note) has-note)
+      (set (make-local-variable 'note-file) note-file)
+      (set (make-local-variable 'ray) ray)
+      )
+    ))
+
+(defun xr-edit-set-header-line ()
+  "Set header line."
+  (setq header-line-format
+        (substitute-command-keys
+         (concat
+          "\\<xray-note-edit-mode-map>"
+          "Confirm with `\\[xray-note-edit-buffer-confirm]', "
+          "Cancel with `\\[xray-note-edit-buffer-cancel]'. "
+          ))))
+
 (defun xr-edit-ray (ray)
   ""
   (let* ((file (plist-get ray :file))

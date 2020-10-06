@@ -57,30 +57,39 @@
   (let* ((ray (cdr cand)))
     (xr-edit-ray ray)))
 
+(defun counsel-xr-edit-or-add-note (cand)
+  ""
+  (let* ((ray (cdr cand)))
+    (xr-edit-or-add-note ray)))
+
 (defun counsel-xr-format-ray (ray &optional with-file)
   ""
-  (if with-file
+  (let ((note-file (plist-get ray :note-file))
+        (face compilation-info-face))
+    (when note-file
+      (setq face compilation-error-face))
+    (if with-file
+        (format "%s - %s  %s"
+                (propertize (plist-get ray :topic) 'face face)
+                (plist-get ray :desc)
+                (propertize
+                 (concat "["
+                         (f-filename (plist-get ray :file))
+                         ":"
+                         (number-to-string (or (plist-get ray :linum) (plist-get ray :page)))
+                         "]")
+                 'face compilation-line-face)
+                )
       (format "%s - %s  %s"
-              (propertize (plist-get ray :topic) 'face compilation-info-face)
+              (propertize (plist-get ray :topic) 'face face)
+              ;; (plist-get ray :topic)
               (plist-get ray :desc)
               (propertize
-               (concat "["
-                       (f-filename (plist-get ray :file))
-                       ":"
+               (concat ":"
                        (number-to-string (or (plist-get ray :linum) (plist-get ray :page)))
-                       "]")
+                       )
                'face compilation-line-face)
-              )
-    (format "%s - %s  %s"
-            (propertize (plist-get ray :topic) 'face compilation-info-face)
-            ;; (plist-get ray :topic)
-            (plist-get ray :desc)
-            (propertize
-             (concat ":"
-                     (number-to-string (or (plist-get ray :linum) (plist-get ray :page)))
-                     )
-             'face compilation-line-face)
-            )))
+              ))))
 
 (defun counsel-xr-visible-area-rays-collector ()
   ""
@@ -152,7 +161,7 @@
        ((eq major-mode 'doc-view-mode)
         (doc-view-goto-page page))
        (t
-        (message "Unsupported pdf view mode.")))
+        (user-error "Unsupported pdf view mode.")))
       )
      ((s-equals? type "html")
       (setq linum (plist-get ray :linum))
@@ -168,6 +177,7 @@
                         ("o" counsel-xr-file-rays-jump "jump to ray")
                         ("d" counsel-xr-delete-ray "delete a ray")
                         ("e" counsel-xr-edit-ray "edit a ray's desc")
+                        ("n" counsel-xr-edit-or-add-note "edit ray's note or add a note to it")
                         )
               :caller 'counsel-xr-visible-area-rays
               )))
@@ -181,6 +191,7 @@
                         ("o" counsel-xr-file-rays-jump "jump to ray")
                         ("d" counsel-xr-delete-ray "delete a ray")
                         ("e" counsel-xr-edit-ray "edit a ray's desc")
+                        ("n" counsel-xr-edit-or-add-note "edit ray's note or add a note to it")
                         )
               :caller 'counsel-xr-file-rays
               )))
@@ -241,6 +252,7 @@
                         ("o" counsel-xr-rays-jump "jump to ray")
                         ("d" counsel-xr-delete-ray "delete a ray")
                         ("e" counsel-xr-edit-ray "edit a ray's desc")
+                        ("n" counsel-xr-edit-or-add-note "edit ray's note or add a note to it")
                         )
               :caller 'counsel-xr-rays
               ))
@@ -251,13 +263,14 @@
   (let (topic
         rays)
     (setq topic (completing-read "Select a topic: " (xr-topics)))
-    (message "topic %s" topic)
+    ;; (message "topic %s" topic)
     (setq rays (counsel-xr-topic-rays-collector topic))
     (ivy-read "Rays: " rays
               :action '(1
                         ("o" counsel-xr-rays-jump "jump to ray")
                         ("d" counsel-xr-delete-ray "delete a ray")
                         ("e" counsel-xr-edit-ray "edit a ray's desc")
+                        ("n" counsel-xr-edit-or-add-note "edit ray's note or add a note to it")
                         )
               :caller 'counsel-xr-topic-rays
               )))

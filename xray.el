@@ -744,18 +744,26 @@ currently displayed message, if any."
 
 (defun xr-rays-in-visible-area (&optional file-name)
   (let ((file-name (xr-buffer-file-name))
-        begin-line end-line page-no xray-line xray-page-no
+        begin-line
+        end-line
+        page-no xray-line xray-page-no
         rays visible-rays)
     (when file-name
       (setq rays (xr-rays-in-file file-name))
       (cond
        ((or (derived-mode-p 'text-mode)
             (derived-mode-p 'prog-mode))
-        (save-excursion
-          (move-to-window-line-top-bottom 0)
-          (setq begin-line (line-number-at-pos))
-          (move-to-window-line-top-bottom -1)
-          (setq end-line (line-number-at-pos)))
+        (setq begin-line (line-number-at-pos (window-start)))
+        (setq end-line (1- (line-number-at-pos (window-end))))
+        (dolist (ray rays)
+          (setq xray-line (plist-get ray :linum))
+          (when (and (>= xray-line begin-line)
+                     (<= xray-line end-line))
+            (add-to-list 'visible-rays ray))))
+       ((or (derived-mode-p 'eww-mode)
+            (derived-mode-p 'w3m-mode))
+        (setq begin-line (line-number-at-pos (window-start)))
+        (setq end-line (1- (line-number-at-pos (window-end))))
         (dolist (ray rays)
           (setq xray-line (plist-get ray :linum))
           (when (and (>= xray-line begin-line)
@@ -920,7 +928,9 @@ currently displayed message, if any."
 (defun xr-visible-area-xray-count (&optional file-name)
   (let ((file-name (xr-buffer-file-name))
         (count 0)
-        begin-line end-line page-no xray-line xray-page-no
+        begin-line
+        end-line
+        page-no xray-line xray-page-no
         xray-file-name xrays)
     (when file-name
       (setq xray-file-name (xr-xray-file-name file-name))
@@ -928,11 +938,8 @@ currently displayed message, if any."
       (cond
        ((or (derived-mode-p 'text-mode)
             (derived-mode-p 'prog-mode))
-        (save-excursion
-          (move-to-window-line-top-bottom 0)
-          (setq begin-line (line-number-at-pos))
-          (move-to-window-line-top-bottom -1)
-          (setq end-line (line-number-at-pos)))
+        (setq begin-line (line-number-at-pos (window-start)))
+        (setq end-line (1- (line-number-at-pos (window-end))))
         (dolist (ray xrays)
           (setq xray-line (plist-get ray :linum))
           (when (and (>= xray-line begin-line)
@@ -942,11 +949,8 @@ currently displayed message, if any."
        ((or
          (eq major-mode 'eww-mode)
          (eq major-mode 'w3m-mode))
-        (save-excursion
-          (move-to-window-line-top-bottom 0)
-          (setq begin-line (line-number-at-pos))
-          (move-to-window-line-top-bottom -1)
-          (setq end-line (line-number-at-pos)))
+        (setq begin-line (line-number-at-pos (window-start)))
+        (setq end-line (1- (line-number-at-pos (window-end))))
         (dolist (ray xrays)
           (setq xray-line (plist-get ray :linum))
           (when (and (>= xray-line begin-line)

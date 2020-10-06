@@ -35,32 +35,6 @@
 ;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth
 ;; Floor, Boston, MA 02110-1301, USA.
 
-;; TODO
-;; 1. counsel列表格式 TEMP
-;; 2. ray的desc DONE
-;; 3. 记录文件相对路径 DONE
-;; 4. 当前文件的ray数量显示在modeline DONE
-;; 5. html相关 DONE
-;; 6. 删除ray DONE
-;; 7. context DONT 
-;; 8. 删除:viewer，添加配置指定是否用eaf打开pdf DONE
-;; 9. 只用xr-file-rays保存ray数据 DONE
-;; 10. 支持运行时切换file对应的ray数据保存位置(xr-directory-alist) DONE
-;; 11. 查看某topic的所有ray DONE
-;; 12. 运行时切换file对应的ray时，原ray文件要删掉旧file内容 TEMP 目前保存时会删掉 - 20200807 DONE
-;; 13. 编辑ray（desc，topic可能没有必要） DONE
-;; 14. truncate太长的desc（以弹窗形式展示？）DONT 
-;; 15. reload当前文件所对应xray file的数据 DONE
-;; 16. 判断是否需要自动加载数据（git同步后文件可能会被覆盖掉） DONE
-;; 17. sort-fn从init.el移到这里 DONE
-;; 18. 最近的topic对应的xray记录展示在列表的最上方 DONE
-;; 19. modeline展示Emacs当前可见区域/当前页（pdf）有几个xray。DONE
-;; 20. 给ray添加一个orgmode文件来记录长笔记，列表里对于这种ray要特别显示。DONE
-;; 21. 将同一topic的ray记录导出到org-roam中。如何处理跟以前导出的文件的冲突问题？TODO
-;; 22. eaf/pdf-tools记录文档percent/页面percent。 DONE
-;; 23. recent-topic按xr-xray-file粒度记录，并记录到xr-xray-file中。DONE
-;; 24. recent-topic按xr-xray-file粒度记录，并记录到xr-xray-file中，跟23不同的是要单独记录，并按顺序记录多个。DONE
-
 (require 'ht)
 (require 's)
 (require 'f)

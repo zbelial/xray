@@ -609,7 +609,7 @@ currently displayed message, if any."
   (let ((type (plist-get ray :type)))
     (cond
      ((s-equals? type "text")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\" :note-file \"%s\")"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\" :note-file %S)"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)
@@ -858,12 +858,16 @@ currently displayed message, if any."
          (topic (plist-get ray :topic))
          (id (plist-get ray :id))
          (note-file (plist-get ray :note-file))
-         has-note)
+         has-note dir)
     (if note-file
         (progn
           (setq note-file (expand-file-name note-file xray-dir))
           (setq has-note t))
       (setq note-file (xr-note-file-name xray-dir topic id)))
+
+    (setq dir (f-dirname note-file))
+    (when (not (f-exists-p dir))
+      (make-directory dir))
 
     (find-file-other-window note-file)
     (with-current-buffer (current-buffer)

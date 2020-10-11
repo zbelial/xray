@@ -313,7 +313,7 @@ currently displayed message, if any."
 
 (defun xr-new-ray-html(file-name xray-file-name)
   "Create a new ray."
-  (let ((topic (xr-select-or-add-topic file-name xray-file-name))
+  (let* ((topic (xr-select-or-add-topic file-name xray-file-name))
         (desc (xr-add-desc topic))
         (linum (xr-current-line-number))
         (context ""))
@@ -619,7 +619,7 @@ currently displayed message, if any."
               (plist-get ray :note-file))
       )
      ((s-equals? type "pdf")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :page %d :context \"%s\" :percent %S :note-file \"%s\")"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :page %d :context \"%s\" :percent %S :note-file %S)"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)
@@ -630,7 +630,7 @@ currently displayed message, if any."
               (plist-get ray :note-file))
       )
      ((s-equals? type "html")
-      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\" :note-file \"%s\")"
+      (format "\(:id %d :type \"%s\" :topic \"%s\" :desc \"%s\" :linum %d :context \"%s\" :note-file %S)"
               (plist-get ray :id)
               (plist-get ray :type)
               (plist-get ray :topic)

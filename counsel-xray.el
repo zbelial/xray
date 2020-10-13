@@ -196,6 +196,17 @@
               :caller 'counsel-xr-file-rays
               )))
 
+(defun counsel-xr-existed-eww-buffer (file)
+  (let ((buffers (buffer-list))
+        target)
+    (dolist (buffer buffers)
+      (with-current-buffer buffer
+        (when (and
+               (eq major-mode 'eww-mode)
+               (equal file (xr-buffer-file-name)))
+          (setq target buffer))))
+    target))
+
 (defun counsel-xr-rays-jump (cand)
   (let* ((ray (cdr cand))
          (file (plist-get ray :file))
@@ -238,11 +249,17 @@
           (user-error "Unsupported pdf view mode.")
           )))))
      ((s-equals? type "html")
-      (eww (s-concat "file://" file))
       (setq linum (plist-get ray :linum))
-      (goto-line linum)
-      (recenter)
-      ))))
+      (let ((buffer (counsel-xr-existed-eww-buffer file))
+            )
+        (if buffer
+            (progn
+              (switch-to-buffer buffer)
+              (goto-line linum)
+              (recenter))
+          (eww (s-concat "file://" file) 4)
+          (goto-line linum)
+          (recenter)))))))
 
 (defun counsel-xr-rays ()
   (interactive)

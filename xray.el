@@ -102,6 +102,9 @@ key: file name, value: topics")
   "Keep track of recently visited topics for each xray file.
 key: xray-file-name, value: topics")
 
+(defvar xr-cleared nil
+  "When `xr-cleared' is not nil, mode-line info shows.")
+
 (defvar xray-note-edit-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-k") #'xray-note-edit-buffer-cancel)
@@ -246,9 +249,9 @@ currently displayed message, if any."
 (defun xr-new-ray-text-or-prog(file-name xray-file-name)
   "Create a new ray."
   (let* ((topic (xr-select-or-add-topic file-name xray-file-name))
-        (desc (xr-add-desc topic))
-        (linum (xr-current-line-number))
-        (context ""))
+         (desc (xr-add-desc topic))
+         (linum (xr-current-line-number))
+         (context ""))
     (list :id (xr-id) :type "text" :file file-name :topic topic :desc desc :linum linum :context context)
     ))
 
@@ -285,18 +288,18 @@ currently displayed message, if any."
         (percent-eaf -1)
         (percent-other -1))
     (cond
-         ((eq major-mode 'pdf-view-mode)
-          (setq page-no (pdf-view-current-page))
-          (setq percent-eaf (* 100 (xr-pdf-view-total-percent)))
-          (setq percent-other (* 100 (xr-pdf-view-page-percent))))
-         ((eq major-mode 'doc-view-mode)
-          (setq page-no (doc-view-current-page)))
-         ((eq major-mode 'eaf-mode)
-          (setq page-no (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
-          (setq percent-eaf (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent")))
-          (setq percent-other (* 100 (xr-eaf-pdf-page-percent))))
-         (t
-          (user-error (format "%s" "Unsupported mode."))))
+     ((eq major-mode 'pdf-view-mode)
+      (setq page-no (pdf-view-current-page))
+      (setq percent-eaf (* 100 (xr-pdf-view-total-percent)))
+      (setq percent-other (* 100 (xr-pdf-view-page-percent))))
+     ((eq major-mode 'doc-view-mode)
+      (setq page-no (doc-view-current-page)))
+     ((eq major-mode 'eaf-mode)
+      (setq page-no (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
+      (setq percent-eaf (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent")))
+      (setq percent-other (* 100 (xr-eaf-pdf-page-percent))))
+     (t
+      (user-error (format "%s" "Unsupported mode."))))
     (list page-no percent-eaf percent-other)))
 
 (defun xr-new-ray-pdf(file-name &optional xray-file-name)
@@ -314,9 +317,9 @@ currently displayed message, if any."
 (defun xr-new-ray-html(file-name xray-file-name)
   "Create a new ray."
   (let* ((topic (xr-select-or-add-topic file-name xray-file-name))
-        (desc (xr-add-desc topic))
-        (linum (xr-current-line-number))
-        (context ""))
+         (desc (xr-add-desc topic))
+         (linum (xr-current-line-number))
+         (context ""))
     (list :id (xr-id) :type "html" :file file-name :topic topic :desc desc :linum linum :context context))
   )
 
@@ -383,7 +386,7 @@ currently displayed message, if any."
 (defun xr-update-recent-topics (file-name topic)
   ""
   (let* ((xray-file (xr-xray-file-name file-name))
-        (topics (xr-recent-topics file-name)))
+         (topics (xr-recent-topics file-name)))
     (setq topics (delete-dups (cons topic topics)))
     (when (> (length topics) xr-recent-topic-count)
       (setq topics (seq-take topics xr-recent-topic-count)))
@@ -486,6 +489,7 @@ currently displayed message, if any."
 (defun xr-clear (&optional file-name)
   ""
   (interactive)
+  (setq xr-cleared t)
   (let* ((file-name (or file-name (xr-buffer-file-name)))
          (xray-file-name (xr-xray-file-name file-name))
          (files (xr-files-in-xray xray-file-name)))
@@ -494,19 +498,17 @@ currently displayed message, if any."
     (ht-remove! xr-latest-modified-time xray-file-name)
     (dolist (file files)
       (ht-remove! xr-file-rays file)
-      (ht-remove! xr-file-topics file))
-    )
-  )
+      (ht-remove! xr-file-topics file))))
 
 (defun xr-clear-all ()
   ""
   (interactive)
+  (setq xr-cleared t)
   (ht-clear! xr-loaded-xray-files)
   (ht-clear! xr-topics)
   (ht-clear! xr-file-rays)
   (ht-clear! xr-file-topics)
-  (ht-clear! xr-latest-modified-time)
-  )
+  (ht-clear! xr-latest-modified-time))
 
 (defun xr-xray-file-changed-time (xray-file-name)
   ""
@@ -523,13 +525,13 @@ currently displayed message, if any."
 
 (defun xr-load-data-ensure (file-name)
   ""
-  ;; (message "xray-file-name %s" xray-file-name)
+  ;; (message "file-name %s, xray-file-name %s" file-name (xr-xray-file-name file-name))
+  (setq xr-cleared nil)
   (let ((xray-file-name (xr-xray-file-name file-name))
         (xray-topic-file-name (xr-xray-topic-file-name file-name)))
     (when (or (not (ht-contains-p xr-loaded-xray-files xray-file-name))
               (xr-xray-file-outdated xray-file-name))
-      (xr-load-data xray-file-name xray-topic-file-name)))
-  )
+      (xr-load-data xray-file-name xray-topic-file-name))))
 
 (defun xr-load-data (xray-file-name xray-topic-file-name)
   "Load xray file."
@@ -597,11 +599,7 @@ currently displayed message, if any."
 
         (ht-set! xr-file-topics file file-topics)
         (ht-set! xr-file-rays file file-rays)
-        (ht-set! xr-topics xray-file xray-topics)
-        )
-      )
-    )
-  )
+        (ht-set! xr-topics xray-file xray-topics)))))
 
 ;;; Save xray to file.
 (defun xr-format-ray (ray)
@@ -641,8 +639,7 @@ currently displayed message, if any."
       )
      (t
       (user-error "%s - %s" "Invalid ray type" type))
-     ))
-  )
+     )))
 
 (defun xr-save--recent-topics (xray-topic-file-name file-name)
   (let* ((topics (xr-recent-topics file-name)))
@@ -702,9 +699,7 @@ currently displayed message, if any."
   (xr-update-modified-time xray-file-name)
 
   (dolist (file (or files (xr-files-in-xray xray-file-name)))
-    (xr-save-file-rays xray-file-name file)
-    )
-  )
+    (xr-save-file-rays xray-file-name file)))
 
 (defun xr-save-recent-topics (file-name)
   ""
@@ -714,10 +709,7 @@ currently displayed message, if any."
       (insert ";;; -*- mode: emacs-lisp -*-\n")
       )
 
-    (xr-save--recent-topics xray-topic-file-name file-name)
-
-    )
-  )
+    (xr-save--recent-topics xray-topic-file-name file-name)))
 
 ;;; Read xray and display them
 
@@ -738,9 +730,7 @@ currently displayed message, if any."
       (setq xray-file-name (xr-xray-file-name file-name))
       (xr-load-data-ensure file-name)
 
-      (ht-get xr-topics xray-file-name))
-    )
-  )
+      (ht-get xr-topics xray-file-name))))
 
 (defun xr-rays-in-visible-area (&optional file-name)
   (let ((file-name (xr-buffer-file-name))
@@ -879,9 +869,7 @@ currently displayed message, if any."
       (xr-edit-set-header-line)
       (set (make-local-variable 'has-note) has-note)
       (set (make-local-variable 'note-file) note-file)
-      (set (make-local-variable 'ray) ray)
-      )
-    ))
+      (set (make-local-variable 'ray) ray))))
 
 (defun xr-edit-set-header-line ()
   "Set header line."
@@ -982,13 +970,17 @@ currently displayed message, if any."
         (file-rays-count 0)
         (rays-count 0)
         xray-file-name)
-    (when file-name
-      (setq xray-file-name (xr-xray-file-name file-name))
-      (setq file-rays-count (length (ht-get xr-file-rays file-name)))
-      (mapcar #'(lambda (file) (setq rays-count (+ rays-count (length (ht-get xr-file-rays file)))))
-              (xr-files-in-xray xray-file-name))
-      (when xr-show-visible-area-xray-count
-        (setq visible-rays-count (xr-visible-area-xray-count file-name))))
+    (if xr-cleared
+        (setq visible-rays-count -1
+              file-rays-count -1
+              rays-count -1)
+      (when file-name
+        (setq xray-file-name (xr-xray-file-name file-name))
+        (setq file-rays-count (length (ht-get xr-file-rays file-name)))
+        (mapcar #'(lambda (file) (setq rays-count (+ rays-count (length (ht-get xr-file-rays file)))))
+                (xr-files-in-xray xray-file-name))
+        (when xr-show-visible-area-xray-count
+          (setq visible-rays-count (xr-visible-area-xray-count file-name)))))
     (if xr-show-visible-area-xray-count
         (format "%d:%d:%d" visible-rays-count file-rays-count rays-count)
       (format "%d:%d" file-rays-count rays-count))))

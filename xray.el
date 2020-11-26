@@ -111,8 +111,9 @@ key: xray-file-name, value: topics")
     (define-key map (kbd "C-c C-c") #'xray-note-edit-buffer-confirm)
     map))
 
-(define-derived-mode xray-note-edit-mode text-mode "XRAY/edit"
-  "The major mode to edit xray note file.")
+(define-minor-mode xray-note-edit-mode
+  "The major mode to edit xray note file."
+  :keymap xray-note-edit-mode-map)
 
 (defun xray-note-edit-buffer-cancel ()
   "Cancel editing note file."
@@ -840,6 +841,11 @@ currently displayed message, if any."
          (filename (concat (f-slash xray-dir) "notes/" topic "-" (number-to-string id) ".org")))
     (f-full filename)))
 
+(defvar xr--edit-buffer-local-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-k") #'xray-note-edit-buffer-cancel)
+    (define-key map (kbd "C-c C-c") #'xray-note-edit-buffer-confirm)
+    map))
 
 (defun xr-edit-or-add-note (ray)
   (let* ((file (plist-get ray :file))
@@ -864,8 +870,7 @@ currently displayed message, if any."
       (org-mode)
       (outline-show-all)
       (end-of-buffer)
-      (local-set-key (kbd "C-c C-c") 'xray-note-edit-buffer-confirm)
-      (local-set-key (kbd "C-c C-k") 'xray-note-edit-buffer-cancel)
+      (xray-note-edit-mode t)
       (xr-edit-set-header-line)
       (set (make-local-variable 'has-note) has-note)
       (set (make-local-variable 'note-file) note-file)

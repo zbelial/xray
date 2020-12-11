@@ -247,13 +247,14 @@ currently displayed message, if any."
   ""
   (format-time-string "%Y%m%d%H%M%S"))
 
-(defun xr-new-ray-text-or-prog(file-name xray-file-name)
+(defun xr-new-ray-text-or-prog(file-name &optional xray-file-name id topic desc)
   "Create a new ray."
-  (let* ((topic (xr-select-or-add-topic file-name xray-file-name))
-         (desc (xr-add-desc topic))
+  (let* ((topic (or topic (xr-select-or-add-topic file-name xray-file-name)))
+         (desc (or desc (xr-add-desc topic)))
+         (id (or id (xr-id)))
          (linum (xr-current-line-number))
          (context ""))
-    (list :id (xr-id) :type "text" :file file-name :topic topic :desc desc :linum linum :context context)
+    (list :id id :type "text" :file file-name :topic topic :desc desc :linum linum :context context)
     ))
 
 (defun xr-pdf-view-page-percent ()
@@ -303,25 +304,27 @@ currently displayed message, if any."
       (user-error (format "%s" "Unsupported mode."))))
     (list page-no percent-eaf percent-other)))
 
-(defun xr-new-ray-pdf(file-name &optional xray-file-name)
+(defun xr-new-ray-pdf(file-name &optional xray-file-name id topic desc)
   "Create a new ray."
   (let* ((xray-file-name (or xray-file-name (xr-xray-file-name file-name)))
          (page-percent (xr-pdf-page-and-percent file-name))
          (page (nth 0 page-percent))
          (percent-eaf (nth 1 page-percent))
          (percent-other (nth 2 page-percent))
-         topic desc)
-    (setq topic (xr-select-or-add-topic file-name xray-file-name))
-    (setq desc (xr-add-desc topic))
-    (list :id (xr-id) :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons percent-eaf percent-other))))
+         (id (or id (xr-id)))
+         (topic (or topic (xr-select-or-add-topic file-name xray-file-name)))
+         (desc (or desc (xr-add-desc topic)))
+         )
+    (list :id id :type "pdf" :file file-name :topic topic :desc desc :page page :context "" :percent (cons percent-eaf percent-other))))
 
-(defun xr-new-ray-html(file-name xray-file-name)
+(defun xr-new-ray-html(file-name &optional xray-file-name id topic desc)
   "Create a new ray."
-  (let* ((topic (xr-select-or-add-topic file-name xray-file-name))
-         (desc (xr-add-desc topic))
+  (let* ((topic (or topic (xr-select-or-add-topic file-name xray-file-name)))
+         (desc (or desc (xr-add-desc topic)))
+         (id (or id (xr-id)))
          (linum (xr-current-line-number))
          (context ""))
-    (list :id (xr-id) :type "html" :file file-name :topic topic :desc desc :linum linum :context context))
+    (list :id id :type "html" :file file-name :topic topic :desc desc :linum linum :context context))
   )
 
 (defun xr-xray-file-name (&optional file-name)
@@ -815,6 +818,63 @@ currently displayed message, if any."
         (dolist (ray (ht-get xr-file-rays file))
           (add-to-list 'all-rays ray))))
     all-rays))
+
+;;; move
+
+(defun xr-new-ray-for-move (file-name xray-file-name id topic desc)
+  "Create a new piece of xray data using old `id', `topic' and `desc'."
+  (let* ((suffix (f-ext file-name))
+         ray)
+    (cond
+     ((s-equals? suffix "pdf")
+      (setq ray (xr-new-ray-pdf file-name xray-file-name id topic desc))
+      )
+     ((or
+       (eq major-mode 'eww-mode)
+       (eq major-mode 'w3m-mode))
+      (setq ray (xr-new-ray-html file-name xray-file-name id topic desc))
+      )
+     ((derived-mode-p 'text-mode)
+      (setq ray (xr-new-ray-text-or-prog file-name xray-file-name id topic desc))
+      )
+     ((derived-mode-p 'prog-mode)
+      (setq ray (xr-new-ray-text-or-prog file-name xray-file-name id topic desc))
+      )
+     (t
+      (user-error "%s" "Unsupported file type."))
+     )
+    )
+  )
+
+
+(defun xr-move-ray (ray)
+  ""
+  (let* ((file (plist-get ray :file))
+         (xray-file (xr-xray-file-name file))
+         (id (plist-get ray :id))
+         (topic (plist-get ray :topic))
+         (desc (plist-get ray :desc))
+         (note-file (plist-get ray :note-file))
+         (file-rays (ht-get xr-file-rays file))
+         (current-file (xr-buffer-file-name))
+         new-ray)
+    (if (string-equal file current-file)
+        (progn
+          (when (yes-or-no-p "Please move to the target position. Ready?")
+            (setq new-ray (xr-new-ray-for-move file xray-file id topic desc))
+            (setq file-rays (remove-if #'(lambda (ray)
+                                           (equal id (plist-get ray :id)))
+                                       file-rays))
+            (when note-file
+              (setq new-ray (plist-put :note-file note-file))
+              )
+            (message "ray %S" ray)
+            (message "new-ray %S" new-ray)
+
+            (add-to-list 'file-rays new-ray)
+            (ht-set! xr-file-rays file file-rays)
+            (xr-save-rays xray-file)))
+      (user-error (format "You can only move xray in current file.")))))
 
 
 ;;; Delete

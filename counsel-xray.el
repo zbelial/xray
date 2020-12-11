@@ -57,6 +57,11 @@
   (let* ((ray (cdr cand)))
     (xr-edit-ray ray)))
 
+(defun counsel-xr-move-ray (cand)
+  ""
+  (let* ((ray (cdr cand)))
+    (xr-move-ray ray)))
+
 (defun counsel-xr-edit-or-add-note (cand)
   ""
   (let* ((ray (cdr cand)))
@@ -178,6 +183,7 @@
                         ("d" counsel-xr-delete-ray "delete a ray")
                         ("e" counsel-xr-edit-ray "edit a ray's desc")
                         ("n" counsel-xr-edit-or-add-note "edit ray's note or add a note to it")
+                        ("v" counsel-xr-move-ray "move ray to a new position")
                         )
               :caller 'counsel-xr-visible-area-rays
               )))
@@ -192,6 +198,7 @@
                         ("d" counsel-xr-delete-ray "delete a ray")
                         ("e" counsel-xr-edit-ray "edit a ray's desc")
                         ("n" counsel-xr-edit-or-add-note "edit ray's note or add a note to it")
+                        ("v" counsel-xr-move-ray "move ray to a new position")
                         )
               :caller 'counsel-xr-file-rays
               )))

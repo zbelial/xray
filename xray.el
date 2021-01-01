@@ -8,6 +8,7 @@
 ;; Created: 2020-07-30 23:08:12
 ;; Version: 0.1
 ;; URL: https://github.com/zbelial/xray.el
+;; Package-Requires: ((emacs "26.1") (ht "2.2") (f "0.17.2") (s "1.12.0"))
 ;; Keywords:
 ;; Compatibility: GNU Emacs 27.0.50
 ;;

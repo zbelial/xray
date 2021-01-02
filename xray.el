@@ -40,6 +40,7 @@
 (require 's)
 (require 'f)
 (require 'seq)
+(require 'cl-seq)
 
 (declare-function doc-view-current-page "doc-view")
 (declare-function pdf-view-bookmark-make-record "ext:pdf-view")
@@ -140,7 +141,7 @@ key: xray-file-name, value: topics")
     (when (not has-note)
       ;; (message "add :note-file")
       (setq ray (plist-put ray :note-file (s-chop-prefix (f-full xray-dir) (f-full note-file))))
-      (setq file-rays (remove-if #'(lambda (ray)
+      (setq file-rays (cl-remove-if #'(lambda (ray)
                                      (equal id (plist-get ray :id)))
                                  file-rays))
       (add-to-list 'file-rays ray)
@@ -863,7 +864,7 @@ currently displayed message, if any."
         (progn
           (when (yes-or-no-p "Please move to the target position. Ready?")
             (setq new-ray (xr-new-ray-for-move file xray-file id topic desc))
-            (setq file-rays (remove-if #'(lambda (ray)
+            (setq file-rays (cl-remove-if #'(lambda (ray)
                                            (equal id (plist-get ray :id)))
                                        file-rays))
             (when note-file
@@ -886,7 +887,7 @@ currently displayed message, if any."
          (xray-file (xr-xray-file-name file))
          (id (plist-get ray :id))
          (file-rays (ht-get xr-file-rays file)))
-    (setq file-rays (remove-if #'(lambda (ray)
+    (setq file-rays (cl-remove-if #'(lambda (ray)
                                    (equal id (plist-get ray :id)))
                                file-rays))
     (ht-set! xr-file-rays file file-rays)
@@ -962,7 +963,7 @@ currently displayed message, if any."
     (xr-update-recent-topics file new-topic)
 
     (when (or (not (s-equals-p topic new-topic)) (not (s-equals-p desc new-desc)))
-      (setq file-rays (remove-if #'(lambda (ray)
+      (setq file-rays (cl-remove-if #'(lambda (ray)
                                      (equal id (plist-get ray :id)))
                                  file-rays))
       (setq ray (plist-put ray :topic new-topic))

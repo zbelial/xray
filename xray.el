@@ -144,7 +144,7 @@ key: xray-file-name, value: topics")
       (setq file-rays (cl-remove-if #'(lambda (ray)
                                      (equal id (plist-get ray :id)))
                                  file-rays))
-      (add-to-list 'file-rays ray)
+      (push ray file-rays)
 
       (ht-set! xr-file-rays file file-rays)
       (xr-save-rays xray-file)))
@@ -433,13 +433,13 @@ currently displayed message, if any."
             (ht-set! xr-file-rays file-name '()))
 
           (setq rays (ht-get xr-file-rays file-name))
-          (add-to-list 'rays ray t)
+          (push ray rays)
           (ht-set! xr-file-rays file-name rays)
 
           (setq topic (plist-get ray :topic))
           (setq topics (ht-get xr-topics xray-file-name))
           (setq topics (delete topic topics))
-          (add-to-list 'topics topic)
+          (push topic topics)
           (ht-set! xr-topics xray-file-name topics)
 
           (xr-update-recent-topics file-name topic)
@@ -596,11 +596,11 @@ currently displayed message, if any."
           (setq ray (plist-put ray :file file))
 
           (setq topic (plist-get ray :topic))
-          (add-to-list 'file-topics topic)
+          (push topic file-topics)
 
-          (add-to-list 'xray-topics topic)
+          (push topic xray-topics)
 
-          (add-to-list 'file-rays ray t)
+          (push ray file-rays)
           )
 
         (ht-set! xr-file-topics file file-topics)
@@ -681,7 +681,7 @@ currently displayed message, if any."
         files)
     (dolist (file all-files)
       (when (s-equals? xray-file-name (xr-xray-file-name file))
-        (add-to-list 'files file)))
+        (push file files)))
     files))
 
 
@@ -755,7 +755,7 @@ currently displayed message, if any."
           (setq xray-line (plist-get ray :linum))
           (when (and (>= xray-line begin-line)
                      (<= xray-line end-line))
-            (add-to-list 'visible-rays ray))))
+            (push ray visible-rays))))
        ((or (derived-mode-p 'eww-mode)
             (derived-mode-p 'w3m-mode))
         (setq begin-line (line-number-at-pos (window-start)))
@@ -764,14 +764,14 @@ currently displayed message, if any."
           (setq xray-line (plist-get ray :linum))
           (when (and (>= xray-line begin-line)
                      (<= xray-line end-line))
-            (add-to-list 'visible-rays ray))))
+            (push ray visible-rays))))
        ((s-suffix? ".pdf" file-name t)
         (setq page-no (nth 0 (xr-pdf-page-and-percent file-name)))
         
         (dolist (ray rays)
           (setq xray-page-no (plist-get ray :page))
           (when (= page-no xray-page-no)
-            (add-to-list 'visible-rays ray))))
+            (push ray visible-rays))))
        (t
         (user-error (format "%s" "Unsupported file type."))))
       )
@@ -802,7 +802,7 @@ currently displayed message, if any."
         (setq rays (ht-get xr-file-rays file))
         (dolist (ray rays)
           (when (s-equals-p (plist-get ray :topic) topic)
-            (add-to-list 'all-rays ray))))
+            (push ray all-rays))))
       all-rays
       )))
 
@@ -818,7 +818,7 @@ currently displayed message, if any."
       (setq files (xr-files-in-xray xray-file-name))
       (dolist (file files)
         (dolist (ray (ht-get xr-file-rays file))
-          (add-to-list 'all-rays ray))))
+          (push ray all-rays))))
     all-rays))
 
 ;;; move
@@ -873,7 +873,7 @@ currently displayed message, if any."
             (message "ray %S" ray)
             (message "new-ray %S" new-ray)
 
-            (add-to-list 'file-rays new-ray)
+            (push new-ray file-rays)
             (ht-set! xr-file-rays file file-rays)
             (xr-save-rays xray-file)))
       (user-error (format "You can only move xray in current file.")))))
@@ -970,13 +970,13 @@ currently displayed message, if any."
       (setq ray (plist-put ray :desc new-desc))
 
       (setq topics (ht-get xr-file-topics file))
-      (add-to-list 'topics new-topic)
+      (push new-topic topics)
       (ht-set! xr-file-topics file topics)
       (setq xray-topics (ht-get xr-topics xray-file))
-      (add-to-list 'xray-topics new-topic)
+      (push new-topic xray-topics)
       (ht-set! xr-topics xray-file xray-topics)
       
-      (add-to-list 'file-rays ray)
+      (push ray file-rays)
 
       (ht-set! xr-file-rays file file-rays)
       (xr-save-rays xray-file))))

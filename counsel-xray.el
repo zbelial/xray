@@ -132,6 +132,12 @@
                    1
                  (frame-char-height)))))))
 
+(defun counsel-xray-goto-line (linum &optional buf)
+  (let ((buf (or buf (current-buffer))))
+    (with-current-buffer buf
+      (goto-char (point-min))
+      (forward-line (1- linum)))))
+
 (defun counsel-xr-file-rays-jump (cand)
   (let* ((ray (cdr cand))
          (file (plist-get ray :file))
@@ -142,7 +148,7 @@
     (cond
      ((s-equals? type "text")
       (setq linum (plist-get ray :linum))
-      (goto-line linum)
+      (counsel-xray-goto-line linum)
       (recenter)
       )
      ((s-equals? type "pdf")
@@ -170,7 +176,7 @@
       )
      ((s-equals? type "html")
       (setq linum (plist-get ray :linum))
-      (goto-line linum)
+      (counsel-xray-goto-line linum)
       (recenter)
       ))))
 
@@ -225,7 +231,7 @@
      ((s-equals? type "text")
       (find-file file)
       (setq linum (plist-get ray :linum))
-      (goto-line linum)
+      (counsel-xray-goto-line linum)
       (recenter)
       )
      ((s-equals? type "pdf")
@@ -262,10 +268,10 @@
         (if buffer
             (progn
               (switch-to-buffer buffer)
-              (goto-line linum)
+              (counsel-xray-goto-line linum)
               (recenter))
           (eww (s-concat "file://" file) 4)
-          (goto-line linum)
+          (counsel-xray-goto-line linum)
           (recenter)))))))
 
 (defun counsel-xr-rays ()

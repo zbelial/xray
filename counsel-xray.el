@@ -311,7 +311,7 @@
     (dolist (ray rays)
       (setq rt (plist-get ray :topic))
       (when (s-equals-p rt topic)
-        (add-to-list 'filtered ray)))
+        (push ray filtered)))
     filtered))
 
 ;; FIXME not efficient

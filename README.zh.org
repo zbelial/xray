@@ -1,7 +1,6 @@
-#+TITLE: xray: Help you take notes and more.
+#+TITLE: xray: 给文件添加笔记，并且可以打开对应的文件位置。
 
-给文件添加笔记，并且可以通过笔记记录跳转到对应的文件位置。
-
+中文 | [[https://github.com/zbelial/xray/blob/master/README.org][English]]
 
 * 特性
   - 支持pdf，普通文本文件，以及使用eww/w3m浏览的html
@@ -19,7 +18,9 @@
 
     
 * 秀一下
-  
+  [[https://github.com/zbelial/xray/blob/master/images/xray_in_file.png]]
+
+  [[https://github.com/zbelial/xray/blob/master/images/xray_in_group.png]]
 * 安装
 ** straight  
    #+begin_src emacs-lisp :tangle yes

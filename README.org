@@ -1,2 +1,4 @@
+English | [[https://github.com/zbelial/xray/blob/master/README.zh.org][中文]]
+
 * XRay
   Create topic threads across files that can help you navigate related content.

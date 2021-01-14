@@ -1,0 +1,56 @@
+#+TITLE: xray: Help you take notes and more.
+
+给文件添加笔记，并且可以通过笔记记录跳转到对应的文件位置。
+
+
+* 特性
+  - 支持pdf，普通文本文件，以及使用eww/w3m浏览的html
+    支持用[[https://github.com/manateelazycat/emacs-application-framework][eaf]]或者[[https://github.com/politza/pdf-tools][pdftools]]或者Emacs内置的docview阅读pdf时记笔记。
+  - 能记录笔记对应的原始文件位置，并支持跳转到对应位置
+  - 可以将多个目录归为一个组，它们的笔记会记在一起；可以浏览同一个组的所有笔记
+  - 可以给每条日志附加一个org格式的笔记文件，适合长内容的笔记
+    
+* 注意
+  - 对于文本文件，如果改动过文件内容，会导致跳转到错误位置。
+  - docview只经过简单测试，可能工作的不够好
+  - eww/w3m排版时是根据窗口大小确定如何对内容换行，可能会导致在一台电脑上记录的笔记在另一台电脑上打开时跳转到错误的位置
+    一个变通解决方法是设定eww/w3m使用换行长度。
+  - 依赖 *ivy* 来展示笔记
+
+    
+* 秀一下
+  
+* 安装
+** straight  
+   #+begin_src emacs-lisp :tangle yes
+     (use-package xray
+       :straight (xray :type git :host github :repo "zbelial/xray")
+       :demand t
+       :bind (
+              ;; ("C-c a r" . xr-add-ray)
+              )
+       :config (progn
+                 (setq xr-open-pdf-with-eaf t) ; 用eaf打开pdf笔记对应的pdf文件
+                 (setq xr-default-directory "~/.emacs.d/data/unsync/xray") ; 默认笔记存放目录
+
+                 ;; xr-directory-alist 可以指定不同目录的文件的笔记放在哪个目录，多个目录的笔记可以放到同一个目录下，这样它们就属于一个组了
+                 (setq xr-directory-alist '(
+                                            ("TAG1" . ("/path/to/dir/of/pdf1" . "/path/of/note1"))
+                                            ("TAG2" . ("/path/to/dir/of/pdf2" . "/path/of/note1"))
+                                            ))
+                 )
+       )
+
+     (use-package counsel-xray
+       :after (counsel xray)
+       :bind (
+              ;; ("C-c l x f" . counsel-xr-file-rays) ; 列出当前文件的笔记
+              ;; ("C-c l x r" . counsel-xr-rays) ; 列出当前组的笔记
+              ;; ("C-c l x t" . counsel-xr-topic-rays) ; 按topic列出笔记
+              ;; ("C-c l x v" . counsel-xr-visible-area-rays) ; 列出当前可见区域的笔记
+              )
+       )
+
+   #+end_src
+** 手工安装
+   克隆本项目，将目录加到load-path中，require然后配置一下即可。

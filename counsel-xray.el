@@ -47,27 +47,27 @@
 
 ;;; Read xray and display them
 
-(defun counsel-xr-delete-ray (cand)
+(defun counsel-xr--delete-ray (cand)
   ""
   (let* ((ray (cdr cand)))
-    (xr-delete-ray ray)))
+    (xr--delete-ray ray)))
 
-(defun counsel-xr-edit-ray (cand)
+(defun counsel-xr--edit-ray (cand)
   ""
   (let* ((ray (cdr cand)))
-    (xr-edit-ray ray)))
+    (xr--edit-ray ray)))
 
-(defun counsel-xr-move-ray (cand)
+(defun counsel-xr--move-ray (cand)
   ""
   (let* ((ray (cdr cand)))
-    (xr-move-ray ray)))
+    (xr--move-ray ray)))
 
-(defun counsel-xr-edit-or-add-note (cand)
+(defun counsel-xr--edit-or-add-note (cand)
   ""
   (let* ((ray (cdr cand)))
-    (xr-edit-or-add-note ray)))
+    (xr--edit-or-add-note ray)))
 
-(defun counsel-xr-format-ray (ray &optional with-file)
+(defun counsel-xr--format-ray (ray &optional with-file)
   ""
   (let ((note-file (plist-get ray :note-file))
         (face compilation-info-face))
@@ -96,35 +96,35 @@
                'face compilation-line-face)
               ))))
 
-(defun counsel-xr-visible-area-rays-collector ()
+(defun counsel-xr--visible-area-rays-collector ()
   ""
-  (let ((rays (xr-rays-in-visible-area (xr-buffer-file-name))))
+  (let ((rays (xr--rays-in-visible-area (xr--buffer-file-name))))
     (mapcar #'(lambda (ray)
-                (cons (counsel-xr-format-ray ray) ray))
+                (cons (counsel-xr--format-ray ray) ray))
             rays)))
 
-(defun counsel-xr-file-rays-collector ()
+(defun counsel-xr--file-rays-collector ()
   ""
-  (let ((rays (xr-rays-in-file (xr-buffer-file-name))))
+  (let ((rays (xr--rays-in-file (xr--buffer-file-name))))
     (mapcar #'(lambda (ray)
-                (cons (counsel-xr-format-ray ray) ray))
-            (counsel-xr-sort-rays rays (xr-recent-topics (xr-buffer-file-name))))))
+                (cons (counsel-xr--format-ray ray) ray))
+            (counsel-xr--sort-rays rays (xr--recent-topics (xr--buffer-file-name))))))
 
-(defun counsel-xr-rays-collector ()
+(defun counsel-xr--rays-collector ()
   ""
-  (let ((rays (xr-rays (xr-buffer-file-name))))
+  (let ((rays (xr--rays (xr--buffer-file-name))))
     (mapcar #'(lambda (ray)
-                (cons (counsel-xr-format-ray ray t) ray))
-            (counsel-xr-sort-rays rays (xr-recent-topics (xr-buffer-file-name))))))
+                (cons (counsel-xr--format-ray ray t) ray))
+            (counsel-xr--sort-rays rays (xr--recent-topics (xr--buffer-file-name))))))
 
 (defun counsel-xr-topic-rays-collector (topic)
   ""
-  (let ((rays (xr-rays-of-topic topic)))
+  (let ((rays (xr--rays-of-topic topic)))
     (mapcar #'(lambda (ray)
-                (cons (counsel-xr-format-ray ray t) ray))
-            (counsel-xr-sort-rays rays (xr-recent-topics (xr-buffer-file-name))))))
+                (cons (counsel-xr--format-ray ray t) ray))
+            (counsel-xr--sort-rays rays (xr--recent-topics (xr--buffer-file-name))))))
 
-(defun counsel-xr-pdf-view-goto-percent (percent)
+(defun counsel-xr--pdf-view-goto-percent (percent)
   (let ((size (pdf-view-image-size t)))
     (image-set-window-vscroll
      (round (/ (* percent (cdr size))
@@ -132,23 +132,23 @@
                    1
                  (frame-char-height)))))))
 
-(defun counsel-xray-goto-line (linum &optional buf)
+(defun counsel-xray--goto-line (linum &optional buf)
   (let ((buf (or buf (current-buffer))))
     (with-current-buffer buf
       (goto-char (point-min))
       (forward-line (1- linum)))))
 
-(defun counsel-xr-file-rays-jump (cand)
+(defun counsel-xr--file-rays-jump (cand)
   (let* ((ray (cdr cand))
          (file (plist-get ray :file))
          (type (plist-get ray :type))
          (topic (plist-get ray :topic))
          page linum percent)
-    (xr-update-recent-topics file topic)
+    (xr--update-recent-topics file topic)
     (cond
      ((s-equals? type "text")
       (setq linum (plist-get ray :linum))
-      (counsel-xray-goto-line linum)
+      (counsel-xray--goto-line linum)
       (recenter)
       )
      ((s-equals? type "pdf")
@@ -167,7 +167,7 @@
        ((eq major-mode 'pdf-view-mode)
         (pdf-view-goto-page page)
         (when (and percent (not (equal -1 (cdr percent))))
-          (counsel-xr-pdf-view-goto-percent (/ (cdr percent) 100.0)))
+          (counsel-xr--pdf-view-goto-percent (/ (cdr percent) 100.0)))
         )
        ((eq major-mode 'doc-view-mode)
         (doc-view-goto-page page))
@@ -176,20 +176,20 @@
       )
      ((s-equals? type "html")
       (setq linum (plist-get ray :linum))
-      (counsel-xray-goto-line linum)
+      (counsel-xray--goto-line linum)
       (recenter)
       ))))
 
 (defun counsel-xr-visible-area-rays ()
   (interactive)
-  (let ((rays (counsel-xr-visible-area-rays-collector)))
+  (let ((rays (counsel-xr--visible-area-rays-collector)))
     (ivy-read "Rays: " rays
               :action '(1
-                        ("o" counsel-xr-file-rays-jump "jump to ray")
-                        ("d" counsel-xr-delete-ray "delete a ray")
-                        ("e" counsel-xr-edit-ray "edit a ray's desc")
-                        ("n" counsel-xr-edit-or-add-note "edit ray's note or add a note to it")
-                        ("v" counsel-xr-move-ray "move ray to a new position")
+                        ("o" counsel-xr--file-rays-jump "jump to ray")
+                        ("d" counsel-xr--delete-ray "delete a ray")
+                        ("e" counsel-xr--edit-ray "edit a ray's desc")
+                        ("n" counsel-xr--edit-or-add-note "edit ray's note or add a note to it")
+                        ("v" counsel-xr--move-ray "move ray to a new position")
                         )
               :caller 'counsel-xr-visible-area-rays
               )))
@@ -197,41 +197,41 @@
 
 (defun counsel-xr-file-rays ()
   (interactive)
-  (let ((rays (counsel-xr-file-rays-collector)))
+  (let ((rays (counsel-xr--file-rays-collector)))
     (ivy-read "Rays: " rays
               :action '(1
-                        ("o" counsel-xr-file-rays-jump "jump to ray")
-                        ("d" counsel-xr-delete-ray "delete a ray")
-                        ("e" counsel-xr-edit-ray "edit a ray's desc")
-                        ("n" counsel-xr-edit-or-add-note "edit ray's note or add a note to it")
-                        ("v" counsel-xr-move-ray "move ray to a new position")
+                        ("o" counsel-xr--file-rays-jump "jump to ray")
+                        ("d" counsel-xr--delete-ray "delete a ray")
+                        ("e" counsel-xr--edit-ray "edit a ray's desc")
+                        ("n" counsel-xr--edit-or-add-note "edit ray's note or add a note to it")
+                        ("v" counsel-xr--move-ray "move ray to a new position")
                         )
               :caller 'counsel-xr-file-rays
               )))
 
-(defun counsel-xr-existed-eww-buffer (file)
+(defun counsel-xr--existed-eww-buffer (file)
   (let ((buffers (buffer-list))
         target)
     (dolist (buffer buffers)
       (with-current-buffer buffer
         (when (and
                (eq major-mode 'eww-mode)
-               (equal file (xr-buffer-file-name)))
+               (equal file (xr--buffer-file-name)))
           (setq target buffer))))
     target))
 
-(defun counsel-xr-rays-jump (cand)
+(defun counsel-xr--rays-jump (cand)
   (let* ((ray (cdr cand))
          (file (plist-get ray :file))
          (type (plist-get ray :type))
          (topic (plist-get ray :topic))
          page linum percent)
-    (xr-update-recent-topics file topic)
+    (xr--update-recent-topics file topic)
     (cond
      ((s-equals? type "text")
       (find-file file)
       (setq linum (plist-get ray :linum))
-      (counsel-xray-goto-line linum)
+      (counsel-xray--goto-line linum)
       (recenter)
       )
      ((s-equals? type "pdf")
@@ -253,7 +253,7 @@
          ((eq major-mode 'pdf-view-mode)
           (pdf-view-goto-page page)
           (when (and percent (not (equal -1 (cdr percent))))
-            (counsel-xr-pdf-view-goto-percent (/ (cdr percent) 100.0)))
+            (counsel-xr--pdf-view-goto-percent (/ (cdr percent) 100.0)))
           )
          ((eq major-mode 'doc-view-mode)
           (doc-view-goto-page page)
@@ -263,26 +263,26 @@
           )))))
      ((s-equals? type "html")
       (setq linum (plist-get ray :linum))
-      (let ((buffer (counsel-xr-existed-eww-buffer file))
+      (let ((buffer (counsel-xr--existed-eww-buffer file))
             )
         (if buffer
             (progn
               (switch-to-buffer buffer)
-              (counsel-xray-goto-line linum)
+              (counsel-xray--goto-line linum)
               (recenter))
           (eww (s-concat "file://" file) 4)
-          (counsel-xray-goto-line linum)
+          (counsel-xray--goto-line linum)
           (recenter)))))))
 
 (defun counsel-xr-rays ()
   (interactive)
-  (let ((rays (counsel-xr-rays-collector)))
+  (let ((rays (counsel-xr--rays-collector)))
     (ivy-read "Rays: " rays
               :action '(1
-                        ("o" counsel-xr-rays-jump "jump to ray")
-                        ("d" counsel-xr-delete-ray "delete a ray")
-                        ("e" counsel-xr-edit-ray "edit a ray's desc")
-                        ("n" counsel-xr-edit-or-add-note "edit ray's note or add a note to it")
+                        ("o" counsel-xr--rays-jump "jump to ray")
+                        ("d" counsel-xr--delete-ray "delete a ray")
+                        ("e" counsel-xr--edit-ray "edit a ray's desc")
+                        ("n" counsel-xr--edit-or-add-note "edit ray's note or add a note to it")
                         )
               :caller 'counsel-xr-rays
               ))
@@ -292,20 +292,20 @@
   (interactive)
   (let (topic
         rays)
-    (setq topic (completing-read "Select a topic: " (xr-topics)))
+    (setq topic (completing-read "Select a topic: " (xr--topics)))
     ;; (message "topic %s" topic)
     (setq rays (counsel-xr-topic-rays-collector topic))
     (ivy-read "Rays: " rays
               :action '(1
-                        ("o" counsel-xr-rays-jump "jump to ray")
-                        ("d" counsel-xr-delete-ray "delete a ray")
-                        ("e" counsel-xr-edit-ray "edit a ray's desc")
-                        ("n" counsel-xr-edit-or-add-note "edit ray's note or add a note to it")
+                        ("o" counsel-xr--rays-jump "jump to ray")
+                        ("d" counsel-xr--delete-ray "delete a ray")
+                        ("e" counsel-xr--edit-ray "edit a ray's desc")
+                        ("n" counsel-xr--edit-or-add-note "edit ray's note or add a note to it")
                         )
               :caller 'counsel-xr-topic-rays
               )))
 
-(defun counsel-xr-sort-filter (rays topic)
+(defun counsel-xr--sort-filter (rays topic)
   (let (filtered
         rt)
     (dolist (ray rays)
@@ -315,26 +315,26 @@
     filtered))
 
 ;; FIXME not efficient
-(defun counsel-xr-sort-rays (rays recent-topics &optional cmp-file)
+(defun counsel-xr--sort-rays (rays recent-topics &optional cmp-file)
   (if recent-topics
       (let ((rrays rays)
             sorted
             fr)
         (dolist (topic recent-topics)
-          (setq fr (counsel-xr-sort-filter rrays topic))
+          (setq fr (counsel-xr--sort-filter rrays topic))
           (when fr
             (setq rrays (seq-filter #'(lambda (ray) (not (s-equals-p (plist-get ray :topic) topic))) rrays))
             (setq sorted (append sorted
                                  (if cmp-file
-                                     (sort fr #'counsel-xr-topic-xray-sorter)
-                                   (sort fr #'counsel-xr-xray-sorter))))))
+                                     (sort fr #'counsel-xr--topic-xray-sorter)
+                                   (sort fr #'counsel-xr--xray-sorter))))))
         (append sorted (if cmp-file
-                           (sort rrays #'counsel-xr-topic-xray-sorter)
-                         (sort rrays #'counsel-xr-xray-sorter))))
-    (sort rays #'counsel-xr-topic-xray-sorter))
+                           (sort rrays #'counsel-xr--topic-xray-sorter)
+                         (sort rrays #'counsel-xr--xray-sorter))))
+    (sort rays #'counsel-xr--topic-xray-sorter))
   )
 
-(defun counsel-xr-topic-xray-sorter (&optional lray rray)
+(defun counsel-xr--topic-xray-sorter (&optional lray rray)
   (let* ((ltopic (plist-get lray :topic))
          (rtopic (plist-get rray :topic))
          (lf (f-filename (plist-get lray :file)))
@@ -356,7 +356,7 @@
      (t
       nil))))
 
-(defun counsel-xr-xray-sorter (&optional lray rray)
+(defun counsel-xr--xray-sorter (&optional lray rray)
   (let* ((ltopic (plist-get lray :topic))
          (rtopic (plist-get rray :topic))
          (lpos (or (plist-get lray :linum) (plist-get lray :page)))

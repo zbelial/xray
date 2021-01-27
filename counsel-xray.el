@@ -158,9 +158,9 @@
       (cond
        ((eq major-mode 'eaf-mode)
         (if (and percent (not (equal -1 (car percent))))
-            (eaf-call "call_function_with_args" eaf--buffer-id
+            (eaf-call-sync "call_function_with_args" eaf--buffer-id
                       "jump_to_percent_with_num" (format "%s" (car percent)))
-          (eaf-call "call_function_with_args" eaf--buffer-id
+          (eaf-call-sync "call_function_with_args" eaf--buffer-id
                     "jump_to_page_with_num" page)
           )
         )
@@ -242,9 +242,9 @@
        ((eq xr-open-pdf-with-eaf t)
         (eaf-open file "pdf-viewer")
         (if (and percent (not (equal -1 (car percent))))
-            (eaf-call "call_function_with_args" eaf--buffer-id
+            (eaf-call-sync "call_function_with_args" eaf--buffer-id
                       "jump_to_percent_with_num" (format "%s" (car percent)))
-          (eaf-call "call_function_with_args" eaf--buffer-id
+          (eaf-call-sync "call_function_with_args" eaf--buffer-id
                     "jump_to_page_with_num" page))
         )
        (t

@@ -278,9 +278,9 @@ currently displayed message, if any."
     (/ (+ (1- current-page) page-percent) total-page)))
 
 (defun xr-eaf-pdf-page-percent()
-  (let ((current-page (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
-        (total-page (string-to-number (eaf-call "call_function" eaf--buffer-id "page_total_number")))
-        (total-percent (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent"))))
+  (let ((current-page (string-to-number (eaf-call-sync "call_function" eaf--buffer-id "current_page")))
+        (total-page (string-to-number (eaf-call-sync "call_function" eaf--buffer-id "page_total_number")))
+        (total-percent (string-to-number (eaf-call-sync "call_function" eaf--buffer-id "current_percent"))))
     (* (- 
         (/ total-percent 100.0)
         (/ (* 1.0 (1- current-page)) total-page)
@@ -299,8 +299,8 @@ currently displayed message, if any."
      ((eq major-mode 'doc-view-mode)
       (setq page-no (doc-view-current-page)))
      ((eq major-mode 'eaf-mode)
-      (setq page-no (string-to-number (eaf-call "call_function" eaf--buffer-id "current_page")))
-      (setq percent-eaf (string-to-number (eaf-call "call_function" eaf--buffer-id "current_percent")))
+      (setq page-no (string-to-number (eaf-call-sync "call_function" eaf--buffer-id "current_page")))
+      (setq percent-eaf (string-to-number (eaf-call-sync "call_function" eaf--buffer-id "current_percent")))
       (setq percent-other (* 100 (xr-eaf-pdf-page-percent))))
      (t
       (user-error (format "%s" "Unsupported mode."))))

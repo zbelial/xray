@@ -647,7 +647,7 @@ currently displayed message, if any."
       (user-error "%s - %s" "Invalid ray type" type))
      )))
 
-(defun xr--save-recent-topics (xray-topic-file-name file-name)
+(defun xr--save-recent-topics-2 (xray-topic-file-name file-name)
   (let* ((topics (xr--recent-topics file-name)))
     (when topics
       (f-append-text
@@ -715,7 +715,7 @@ currently displayed message, if any."
       (insert ";;; -*- mode: emacs-lisp -*-\n")
       )
 
-    (xr--save-recent-topics xray-topic-file-name file-name)))
+    (xr--save-recent-topics-2 xray-topic-file-name file-name)))
 
 ;;; Read xray and display them
 

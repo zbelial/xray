@@ -41,6 +41,7 @@
 (require 'f)
 (require 'seq)
 (require 'cl-seq)
+(require 'cl-lib)
 
 (declare-function doc-view-current-page "doc-view")
 (declare-function pdf-view-bookmark-make-record "ext:pdf-view")
@@ -439,7 +440,7 @@ currently displayed message, if any."
           (setq topic (plist-get ray :topic))
           (setq topics (ht-get xr--topics xray-file-name))
           (setq topics (delete topic topics))
-          (push topic topics)
+          (cl-pushnew topic topics :test #'string-equal)
           (ht-set! xr--topics xray-file-name topics)
 
           (xr--update-recent-topics file-name topic)
@@ -596,9 +597,9 @@ currently displayed message, if any."
           (setq ray (plist-put ray :file file))
 
           (setq topic (plist-get ray :topic))
-          (push topic file-topics)
+          (cl-pushnew topic file-topics :test #'string-equal)
 
-          (push topic xray-topics)
+          (cl-pushnew topic xray-topics :test #'string-equal)
 
           (push ray file-rays)
           )
@@ -959,10 +960,10 @@ currently displayed message, if any."
       (setq ray (plist-put ray :desc new-desc))
 
       (setq topics (ht-get xr--file-topics file))
-      (push new-topic topics)
+      (cl-pushnew new-topic topics :test #'string-equal)
       (ht-set! xr--file-topics file topics)
       (setq xray-topics (ht-get xr--topics xray-file))
-      (push new-topic xray-topics)
+      (cl-pushnew new-topic xray-topics :test #'string-equal)
       (ht-set! xr--topics xray-file xray-topics)
       
       (push ray file-rays)

@@ -239,13 +239,16 @@
       (setq percent (plist-get ray :percent))
 
       (cond
-       ((eq xr-open-pdf-with-eaf t)
+       ((and
+         (eq xr-open-pdf-with-eaf t)
+         (fboundp #'eaf-open)
+         )
         (eaf-open file "pdf-viewer")
         (if (and percent (not (equal -1 (car percent))))
             (eaf-call-sync "call_function_with_args" eaf--buffer-id
-                      "jump_to_percent_with_num" (format "%s" (car percent)))
+                           "jump_to_percent_with_num" (format "%s" (car percent)))
           (eaf-call-sync "call_function_with_args" eaf--buffer-id
-                    "jump_to_page_with_num" page))
+                         "jump_to_page_with_num" page))
         )
        (t
         (find-file file)

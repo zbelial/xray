@@ -861,10 +861,10 @@ currently displayed message, if any."
           (when (yes-or-no-p "Please move to the target position. Ready?")
             (setq new-ray (xr--new-ray-for-move file xray-file id topic desc))
             (setq file-rays (cl-remove-if #'(lambda (ray)
-                                           (equal id (plist-get ray :id)))
-                                       file-rays))
+                                              (equal id (plist-get ray :id)))
+                                          file-rays))
             (when note-file
-              (setq new-ray (plist-put :note-file note-file))
+              (setq new-ray (plist-put new-ray :note-file note-file))
               )
             (message "ray %S" ray)
             (message "new-ray %S" new-ray)

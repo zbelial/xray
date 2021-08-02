@@ -446,8 +446,26 @@ currently displayed message, if any."
           (xr--update-recent-topics file-name topic)
 
           (xr--save-rays xray-file-name)
+
+          (xr-add-annot ray)
           )
       (user-error "%s" "Cannot add ray to this file."))
+    )
+  )
+
+(defun xr-add-annot (ray)
+  ""
+  (unless (fboundp #'annot-add)
+    (user-error "annot-add is not available."))
+  
+  (let (annot topic desc type)
+    (setq type (plist-get ray :type))
+    (when (member type '("text" "html"))
+      (setq topic (plist-get ray :topic))
+      (setq desc (plist-get ray :desc))
+
+      (annot-add (format "%s: %s" topic desc))
+      )
     )
   )
 
@@ -954,8 +972,8 @@ currently displayed message, if any."
 
     (when (or (not (s-equals-p topic new-topic)) (not (s-equals-p desc new-desc)))
       (setq file-rays (cl-remove-if #'(lambda (ray)
-                                     (equal id (plist-get ray :id)))
-                                 file-rays))
+                                        (equal id (plist-get ray :id)))
+                                    file-rays))
       (setq ray (plist-put ray :topic new-topic))
       (setq ray (plist-put ray :desc new-desc))
 
@@ -974,6 +992,7 @@ currently displayed message, if any."
 
 ;;; Other 
 
+;;;###autoload
 (defun xr-xray-file-dir ()
   (interactive)
   (message "%s" (xr--xray-file-directory (xr--buffer-file-name))))
